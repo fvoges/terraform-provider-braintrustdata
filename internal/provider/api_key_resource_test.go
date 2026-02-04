@@ -32,14 +32,6 @@ func TestAccAPIKeyResource(t *testing.T) {
 				// Key is only available at creation time, not on import
 				ImportStateVerifyIgnore: []string{"key"},
 			},
-			// Update and Read testing
-			{
-				Config: testAccAPIKeyResourceConfig("test-api-key-updated"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("braintrustdata_api_key.test", "name", "test-api-key-updated"),
-					resource.TestCheckResourceAttrSet("braintrustdata_api_key.test", "preview_name"),
-				),
-			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})

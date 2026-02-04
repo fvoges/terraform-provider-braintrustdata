@@ -60,6 +60,9 @@ func (r *APIKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"name": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "The name of the API key.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"org_id": schema.StringAttribute{
 				Computed:            true,
