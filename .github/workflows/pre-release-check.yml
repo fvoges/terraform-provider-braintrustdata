@@ -1,0 +1,146 @@
+name: Pre-Release Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format. Must be vX.Y.Z (e.g., v0.1.0)"
+            exit 1
+          fi
+          echo "✅ Version format valid: $VERSION"
+
+      - name: Check version not already tagged
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
+            echo "❌ Version $VERSION already exists"
+            exit 1
+          fi
+          echo "✅ Version $VERSION is available"
+
+      - name: Verify CHANGELOG.md updated
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if ! grep -q "$VERSION" CHANGELOG.md; then
+            echo "❌ CHANGELOG.md not updated for $VERSION"
+            echo "Please add a section for $VERSION in CHANGELOG.md"
+            exit 1
+          fi
+          echo "✅ CHANGELOG.md contains $VERSION"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # SECURITY: Static analysis for vulnerabilities
+      - name: Run GoSec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-no-fail -fmt sarif -out results.sarif ./...'
+
+      - name: Upload GoSec SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+      # SECURITY: Dependency vulnerability scanning
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'  # Don't fail on vulnerabilities, just report
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Check for critical vulnerabilities
+        run: |
+          # Parse trivy results for CRITICAL severity
+          if grep -q '"level": "error"' trivy-results.sarif 2>/dev/null; then
+            echo "⚠️  Critical vulnerabilities found. Review before release."
+            # Don't fail - let human decide
+          else
+            echo "✅ No critical vulnerabilities found"
+          fi
+
+      - name: Install tfplugindocs
+        run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+
+      - name: Generate and check documentation
+        run: |
+          make generate
+          if ! git diff --exit-code docs/; then
+            echo "❌ Documentation not up to date. Run 'make generate' and commit."
+            exit 1
+          fi
+          echo "✅ Documentation is up to date"
+
+      - name: Run all tests
+        run: make test
+
+      - name: Validate multi-platform builds
+        run: |
+          echo "Building for multiple platforms..."
+          GOOS=darwin GOARCH=amd64 go build -o /dev/null || exit 1
+          echo "✅ darwin/amd64"
+          GOOS=darwin GOARCH=arm64 go build -o /dev/null || exit 1
+          echo "✅ darwin/arm64"
+          GOOS=linux GOARCH=amd64 go build -o /dev/null || exit 1
+          echo "✅ linux/amd64"
+          GOOS=linux GOARCH=arm64 go build -o /dev/null || exit 1
+          echo "✅ linux/arm64"
+          GOOS=windows GOARCH=amd64 go build -o /dev/null || exit 1
+          echo "✅ windows/amd64"
+
+      - name: Release summary
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo ""
+          echo "╔════════════════════════════════════════════════════════════════╗"
+          echo "║                  ✅ All checks passed!                        ║"
+          echo "╚════════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Ready to release: $VERSION"
+          echo ""
+          echo "To create the release, run:"
+          echo "  git tag $VERSION"
+          echo "  git push origin $VERSION"
+          echo ""
+          echo "The release workflow will automatically:"
+          echo "  • Build binaries for all platforms"
+          echo "  • Generate checksums and SBOM"
+          echo "  • Create GitHub release with notes"
+          echo "  • Publish to Terraform Registry"
+          echo ""
