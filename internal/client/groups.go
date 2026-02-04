@@ -17,11 +17,11 @@ type Group struct {
 }
 
 // CreateGroupRequest represents a request to create a group
+// Note: member_ids are not supported during creation and must be added via update
 type CreateGroupRequest struct {
-	Name        string   `json:"name"`
-	OrgID       string   `json:"org_id,omitempty"`
-	Description string   `json:"description,omitempty"`
-	MemberIDs   []string `json:"member_ids,omitempty"`
+	Name        string `json:"name"`
+	OrgID       string `json:"org_id,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 // UpdateGroupRequest represents a request to update a group

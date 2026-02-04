@@ -34,7 +34,6 @@ func TestCreateGroup(t *testing.T) {
 			Name:        req.Name,
 			OrgID:       req.OrgID,
 			Description: req.Description,
-			MemberIDs:   req.MemberIDs,
 			Created:     time.Now().Format(time.RFC3339),
 		}
 
@@ -50,7 +49,6 @@ func TestCreateGroup(t *testing.T) {
 		Name:        "Test Group",
 		OrgID:       "org-test",
 		Description: "A test group",
-		MemberIDs:   []string{"user-1", "user-2"},
 	})
 
 	if err != nil {
@@ -63,9 +61,8 @@ func TestCreateGroup(t *testing.T) {
 	if group.Name != "Test Group" {
 		t.Errorf("expected name 'Test Group', got %s", group.Name)
 	}
-	if len(group.MemberIDs) != 2 {
-		t.Errorf("expected 2 member IDs, got %d", len(group.MemberIDs))
-	}
+	// Note: member_ids are not returned during creation as the API doesn't accept them
+	// Members must be added via a separate update call
 }
 
 // TestGetGroup verifies group retrieval

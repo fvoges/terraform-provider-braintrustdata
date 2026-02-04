@@ -120,21 +120,11 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		orgID = data.OrgID.ValueString()
 	}
 
-	// Convert member IDs from Terraform list to string slice
-	var memberIDs []string
-	if !data.MemberIDs.IsNull() {
-		resp.Diagnostics.Append(data.MemberIDs.ElementsAs(ctx, &memberIDs, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Create group via API
+	// Create group via API (without member_ids - API doesn't support them during creation)
 	group, err := r.client.CreateGroup(ctx, &client.CreateGroupRequest{
 		Name:        data.Name.ValueString(),
 		OrgID:       orgID,
 		Description: data.Description.ValueString(),
-		MemberIDs:   memberIDs,
 	})
 
 	if err != nil {
@@ -142,10 +132,39 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// If member_ids are specified, update the group to add them
+	if !data.MemberIDs.IsNull() {
+		var memberIDs []string
+		resp.Diagnostics.Append(data.MemberIDs.ElementsAs(ctx, &memberIDs, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Update group with member_ids
+		updatedGroup, err := r.client.UpdateGroup(ctx, group.ID, &client.UpdateGroupRequest{
+			MemberIDs: memberIDs,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to add members to group, got error: %s", err))
+			return
+		}
+		group = updatedGroup
+	}
+
 	// Update model with response data
 	data.ID = types.StringValue(group.ID)
 	data.OrgID = types.StringValue(group.OrgID)
 	data.Created = types.StringValue(group.Created)
+
+	// Update member_ids from the final group state
+	if len(group.MemberIDs) > 0 {
+		memberIDsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberIDs)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.MemberIDs = memberIDsList
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
