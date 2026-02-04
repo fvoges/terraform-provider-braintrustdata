@@ -156,6 +156,14 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Read the group to get the complete state including members
+	// The API doesn't return member_users and member_groups in the CREATE response
+	group, err = r.client.GetGroup(ctx, group.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read group after creation, got error: %s", err))
+		return
+	}
+
 	// Update model with response data
 	data.ID = types.StringValue(group.ID)
 	data.OrgID = types.StringValue(group.OrgID)
