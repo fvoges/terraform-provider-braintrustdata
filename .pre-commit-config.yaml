@@ -1,0 +1,62 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+
+  # SECURITY: Secret detection to prevent accidental credential leaks
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: go fmt
+        entry: gofmt -w -s
+        language: system
+        files: \.go$
+        pass_filenames: true
+
+      - id: go-vet
+        name: go vet
+        entry: go vet
+        language: system
+        files: \.go$
+        pass_filenames: false
+        args: ['./...']
+
+      # SECURITY: Static analysis for security vulnerabilities
+      - id: go-sec
+        name: gosec security scanner
+        entry: bash -c 'command -v gosec >/dev/null 2>&1 && gosec -quiet ./... || echo "gosec not installed, skipping (install with: go install github.com/securego/gosec/v2/cmd/gosec@latest)"'
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: go-test
+        name: go test
+        entry: bash -c 'go test ./internal/client/... ./internal/provider/... -timeout=60s'
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: bash -c 'if [ -d examples ]; then terraform fmt -recursive examples/; fi'
+        language: system
+        files: \.tf$
+        pass_filenames: false
+
+      - id: generate-docs
+        name: generate docs
+        entry: bash -c 'command -v tfplugindocs >/dev/null 2>&1 && make generate || echo "tfplugindocs not installed, skipping (install with: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest)"'
+        language: system
+        files: (internal/provider/.*\.go|templates/.*\.tmpl|examples/.*)$
+        pass_filenames: false

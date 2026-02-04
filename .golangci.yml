@@ -1,0 +1,71 @@
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - tools
+
+linters:
+  enable:
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Vet examines Go source code
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Static analysis
+    - unused        # Check for unused code
+    - gofmt         # Check formatting
+    - goimports     # Check imports
+    - misspell      # Check for misspellings
+    - revive        # Fast, configurable, extensible linter
+    - gosec         # Security checker
+    - bodyclose     # Check HTTP response body is closed
+    - noctx         # Check for sending HTTP requests without context
+    - errorlint     # Check error wrapping
+    - exportloopref # Check for pointers to loop variables
+    - gocritic      # Meta linter with various checks
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+
+  revive:
+    confidence: 0.8
+    rules:
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+
+  gosec:
+    excludes:
+      - G104 # Audit errors not checked (covered by errcheck)
+
+  staticcheck:
+    checks: ["all"]
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Exclude some linters from running on tests
+    - path: _test\.go
+      linters:
+        - gosec
+        - errcheck
+        - gocritic
+
+    # Allow dot imports in tests for testify/assert
+    - path: _test\.go
+      text: "dot imports"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
