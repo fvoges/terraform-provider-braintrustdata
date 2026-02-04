@@ -8,7 +8,19 @@ This is a Terraform provider for Braintrust (braintrust.dev) built using the Ter
 
 **Current Status**: Phase 1 complete (foundation + authentication), Phase 2 complete (Group resource + data sources).
 
-## 🚨 CRITICAL RULE: Dependency Currency
+## 🚨 CRITICAL RULES
+
+### Never Mention Claude in Files or Commits
+
+**NEVER** include any reference to "Claude", "Claude Code", "Claude Sonnet", "Anthropic", or AI assistance in:
+- Git commit messages (including Co-Authored-By)
+- Code comments
+- Documentation files
+- Any file checked into the repository
+
+User wants commits and code to appear as if written by a human developer without AI assistance.
+
+### Dependency Currency
 
 **ALWAYS ensure all tools and dependencies use current recommended versions.**
 
