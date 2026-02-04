@@ -133,6 +133,7 @@ func (p *BraintrustProvider) Configure(ctx context.Context, req provider.Configu
 func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewACLResource,
+		NewAPIKeyResource,
 		NewGroupResource,
 		NewProjectResource,
 		NewRoleResource,
