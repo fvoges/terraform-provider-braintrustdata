@@ -76,12 +76,13 @@ func TestGetGroup(t *testing.T) {
 		}
 
 		resp := Group{
-			ID:          "group-123",
-			Name:        "Test Group",
-			OrgID:       "org-test",
-			Description: "A test group",
-			MemberIDs:   []string{"user-1", "user-2"},
-			Created:     time.Now().Format(time.RFC3339),
+			ID:           "group-123",
+			Name:         "Test Group",
+			OrgID:        "org-test",
+			Description:  "A test group",
+			MemberUsers:  []string{"user-1", "user-2"},
+			MemberGroups: []string{"group-1"},
+			Created:      time.Now().Format(time.RFC3339),
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -152,12 +153,13 @@ func TestUpdateGroup(t *testing.T) {
 		}
 
 		resp := Group{
-			ID:          "group-123",
-			Name:        req.Name,
-			Description: req.Description,
-			MemberIDs:   req.MemberIDs,
-			OrgID:       "org-test",
-			Created:     time.Now().Format(time.RFC3339),
+			ID:           "group-123",
+			Name:         req.Name,
+			Description:  req.Description,
+			MemberUsers:  req.MemberUsers,
+			MemberGroups: req.MemberGroups,
+			OrgID:        "org-test",
+			Created:      time.Now().Format(time.RFC3339),
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -169,9 +171,10 @@ func TestUpdateGroup(t *testing.T) {
 	client.httpClient = server.Client()
 
 	group, err := client.UpdateGroup(context.Background(), "group-123", &UpdateGroupRequest{
-		Name:        "Updated Group",
-		Description: "Updated description",
-		MemberIDs:   []string{"user-1", "user-2", "user-3"},
+		Name:         "Updated Group",
+		Description:  "Updated description",
+		MemberUsers:  []string{"user-1", "user-2"},
+		MemberGroups: []string{"group-1"},
 	})
 
 	if err != nil {
@@ -181,8 +184,11 @@ func TestUpdateGroup(t *testing.T) {
 	if group.Name != "Updated Group" {
 		t.Errorf("expected name 'Updated Group', got %s", group.Name)
 	}
-	if len(group.MemberIDs) != 3 {
-		t.Errorf("expected 3 member IDs, got %d", len(group.MemberIDs))
+	if len(group.MemberUsers) != 2 {
+		t.Errorf("expected 2 member users, got %d", len(group.MemberUsers))
+	}
+	if len(group.MemberGroups) != 1 {
+		t.Errorf("expected 1 member group, got %d", len(group.MemberGroups))
 	}
 }
 

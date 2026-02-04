@@ -66,6 +66,7 @@ Read-Only:
 - `created` (String) The timestamp when the group was created.
 - `description` (String) A description of the group.
 - `id` (String) The unique identifier of the group.
-- `member_ids` (List of String) List of user IDs that are members of this group.
+- `member_groups` (List of String) List of group IDs that are members of this group.
+- `member_users` (List of String) List of user IDs that are members of this group.
 - `name` (String) The name of the group.
 - `org_id` (String) The organization ID.

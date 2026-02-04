@@ -52,7 +52,8 @@ resource "braintrustdata_group" "org_admins" {
 ### Optional
 
 - `description` (String) A description of the group.
-- `member_ids` (List of String) List of user IDs that are members of this group.
+- `member_groups` (List of String) List of group IDs that are members of this group.
+- `member_users` (List of String) List of user IDs that are members of this group.
 - `org_id` (String) The organization ID. Defaults to the provider's organization_id.
 
 ### Read-Only

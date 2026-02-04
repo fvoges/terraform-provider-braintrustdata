@@ -29,12 +29,13 @@ type GroupResource struct {
 
 // GroupResourceModel describes the resource data model.
 type GroupResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	OrgID       types.String `tfsdk:"org_id"`
-	Description types.String `tfsdk:"description"`
-	MemberIDs   types.List   `tfsdk:"member_ids"`
-	Created     types.String `tfsdk:"created"`
+	ID           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	OrgID        types.String `tfsdk:"org_id"`
+	Description  types.String `tfsdk:"description"`
+	MemberUsers  types.List   `tfsdk:"member_users"`
+	MemberGroups types.List   `tfsdk:"member_groups"`
+	Created      types.String `tfsdk:"created"`
 }
 
 // Metadata implements resource.Resource.
@@ -72,10 +73,15 @@ func (r *GroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:            true,
 				MarkdownDescription: "A description of the group.",
 			},
-			"member_ids": schema.ListAttribute{
+			"member_users": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
 				MarkdownDescription: "List of user IDs that are members of this group.",
+			},
+			"member_groups": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "List of group IDs that are members of this group.",
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
@@ -120,11 +126,29 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		orgID = data.OrgID.ValueString()
 	}
 
-	// Create group via API (without member_ids - API doesn't support them during creation)
+	// Extract member lists from plan
+	var memberUsers []string
+	var memberGroups []string
+	if !data.MemberUsers.IsNull() {
+		resp.Diagnostics.Append(data.MemberUsers.ElementsAs(ctx, &memberUsers, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	if !data.MemberGroups.IsNull() {
+		resp.Diagnostics.Append(data.MemberGroups.ElementsAs(ctx, &memberGroups, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Create group via API with members
 	group, err := r.client.CreateGroup(ctx, &client.CreateGroupRequest{
-		Name:        data.Name.ValueString(),
-		OrgID:       orgID,
-		Description: data.Description.ValueString(),
+		Name:         data.Name.ValueString(),
+		OrgID:        orgID,
+		Description:  data.Description.ValueString(),
+		MemberUsers:  memberUsers,
+		MemberGroups: memberGroups,
 	})
 
 	if err != nil {
@@ -132,38 +156,32 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// If member_ids are specified, update the group to add them
-	if !data.MemberIDs.IsNull() {
-		var memberIDs []string
-		resp.Diagnostics.Append(data.MemberIDs.ElementsAs(ctx, &memberIDs, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		// Update group with member_ids
-		updatedGroup, err := r.client.UpdateGroup(ctx, group.ID, &client.UpdateGroupRequest{
-			MemberIDs: memberIDs,
-		})
-		if err != nil {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to add members to group, got error: %s", err))
-			return
-		}
-		group = updatedGroup
-	}
-
 	// Update model with response data
 	data.ID = types.StringValue(group.ID)
 	data.OrgID = types.StringValue(group.OrgID)
 	data.Created = types.StringValue(group.Created)
 
-	// Update member_ids from the final group state
-	if len(group.MemberIDs) > 0 {
-		memberIDsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberIDs)
+	// Update member lists from API response
+	if len(group.MemberUsers) > 0 {
+		memberUsersList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberUsers)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		data.MemberIDs = memberIDsList
+		data.MemberUsers = memberUsersList
+	} else {
+		data.MemberUsers = types.ListNull(types.StringType)
+	}
+
+	if len(group.MemberGroups) > 0 {
+		memberGroupsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberGroups)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.MemberGroups = memberGroupsList
+	} else {
+		data.MemberGroups = types.ListNull(types.StringType)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -202,16 +220,27 @@ func (r *GroupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	data.OrgID = types.StringValue(group.OrgID)
 	data.Created = types.StringValue(group.Created)
 
-	// Convert member IDs to Terraform list
-	if len(group.MemberIDs) > 0 {
-		memberList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberIDs)
+	// Convert member lists to Terraform lists
+	if len(group.MemberUsers) > 0 {
+		memberUsersList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberUsers)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		data.MemberIDs = memberList
+		data.MemberUsers = memberUsersList
 	} else {
-		data.MemberIDs = types.ListNull(types.StringType)
+		data.MemberUsers = types.ListNull(types.StringType)
+	}
+
+	if len(group.MemberGroups) > 0 {
+		memberGroupsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberGroups)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.MemberGroups = memberGroupsList
+	} else {
+		data.MemberGroups = types.ListNull(types.StringType)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -230,10 +259,17 @@ func (r *GroupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Convert member IDs from Terraform list to string slice
-	var memberIDs []string
-	if !data.MemberIDs.IsNull() {
-		resp.Diagnostics.Append(data.MemberIDs.ElementsAs(ctx, &memberIDs, false)...)
+	// Convert member lists from Terraform to string slices
+	var memberUsers []string
+	var memberGroups []string
+	if !data.MemberUsers.IsNull() {
+		resp.Diagnostics.Append(data.MemberUsers.ElementsAs(ctx, &memberUsers, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	if !data.MemberGroups.IsNull() {
+		resp.Diagnostics.Append(data.MemberGroups.ElementsAs(ctx, &memberGroups, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -241,9 +277,10 @@ func (r *GroupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Update group via API
 	group, err := r.client.UpdateGroup(ctx, data.ID.ValueString(), &client.UpdateGroupRequest{
-		Name:        data.Name.ValueString(),
-		Description: data.Description.ValueString(),
-		MemberIDs:   memberIDs,
+		Name:         data.Name.ValueString(),
+		Description:  data.Description.ValueString(),
+		MemberUsers:  memberUsers,
+		MemberGroups: memberGroups,
 	})
 
 	if err != nil {

@@ -51,7 +51,8 @@ func TestAccGroupResource_WithMembers(t *testing.T) {
 				Config: testAccGroupResourceConfigWithMembers(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("braintrustdata_group.test", "name", "test-group-members"),
-					resource.TestCheckResourceAttr("braintrustdata_group.test", "member_ids.#", "2"),
+					resource.TestCheckResourceAttr("braintrustdata_group.test", "member_users.#", "1"),
+					resource.TestCheckResourceAttr("braintrustdata_group.test", "member_groups.#", "1"),
 					resource.TestCheckResourceAttr("braintrustdata_group.member", "name", "test-member-group"),
 				),
 			},
@@ -76,14 +77,11 @@ resource "braintrustdata_group" "member" {
 }
 
 resource "braintrustdata_group" "test" {
-  name        = "test-group-members"
-  description = "Group with both user and group members"
-  # member_ids can contain both user IDs and group IDs
-  # Using a real user ID from the API and a group created in this test
-  member_ids  = [
-    "866a8a8a-fee9-4a5b-8278-12970de499c2",  # Real user ID (TODO: replace with data source)
-    braintrustdata_group.member.id
-  ]
+  name         = "test-group-members"
+  description  = "Group with both user and group members"
+  # API uses separate fields for user and group members
+  member_users = ["866a8a8a-fee9-4a5b-8278-12970de499c2"]  # Real user ID (TODO: replace with data source)
+  member_groups = [braintrustdata_group.member.id]
 }
 `
 }

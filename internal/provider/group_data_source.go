@@ -26,12 +26,13 @@ type GroupDataSource struct {
 
 // GroupDataSourceModel describes the data source data model.
 type GroupDataSourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	OrgID       types.String `tfsdk:"org_id"`
-	Description types.String `tfsdk:"description"`
-	MemberIDs   types.List   `tfsdk:"member_ids"`
-	Created     types.String `tfsdk:"created"`
+	ID           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	OrgID        types.String `tfsdk:"org_id"`
+	Description  types.String `tfsdk:"description"`
+	MemberUsers  types.List   `tfsdk:"member_users"`
+	MemberGroups types.List   `tfsdk:"member_groups"`
+	Created      types.String `tfsdk:"created"`
 }
 
 // Metadata implements datasource.DataSource.
@@ -64,10 +65,15 @@ func (d *GroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Computed:            true,
 				MarkdownDescription: "A description of the group.",
 			},
-			"member_ids": schema.ListAttribute{
+			"member_users": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Computed:            true,
 				MarkdownDescription: "List of user IDs that are members of this group.",
+			},
+			"member_groups": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				MarkdownDescription: "List of group IDs that are members of this group.",
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
@@ -184,13 +190,28 @@ func (d *GroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	data.Description = types.StringValue(group.Description)
 	data.Created = types.StringValue(group.Created)
 
-	// Convert member IDs
-	memberIDsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberIDs)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Convert member lists
+	if len(group.MemberUsers) > 0 {
+		memberUsersList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberUsers)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.MemberUsers = memberUsersList
+	} else {
+		data.MemberUsers = types.ListNull(types.StringType)
 	}
-	data.MemberIDs = memberIDsList
+
+	if len(group.MemberGroups) > 0 {
+		memberGroupsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberGroups)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.MemberGroups = memberGroupsList
+	} else {
+		data.MemberGroups = types.ListNull(types.StringType)
+	}
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

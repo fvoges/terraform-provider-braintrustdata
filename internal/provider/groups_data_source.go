@@ -7,6 +7,7 @@ import (
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -32,12 +33,13 @@ type GroupsDataSourceModel struct {
 
 // GroupsDataSourceGroup represents a single group in the list.
 type GroupsDataSourceGroup struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	OrgID       types.String `tfsdk:"org_id"`
-	Description types.String `tfsdk:"description"`
-	MemberIDs   types.List   `tfsdk:"member_ids"`
-	Created     types.String `tfsdk:"created"`
+	ID           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	OrgID        types.String `tfsdk:"org_id"`
+	Description  types.String `tfsdk:"description"`
+	MemberUsers  types.List   `tfsdk:"member_users"`
+	MemberGroups types.List   `tfsdk:"member_groups"`
+	Created      types.String `tfsdk:"created"`
 }
 
 // Metadata implements datasource.DataSource.
@@ -82,10 +84,15 @@ func (d *GroupsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 							Computed:            true,
 							MarkdownDescription: "A description of the group.",
 						},
-						"member_ids": schema.ListAttribute{
+						"member_users": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
 							MarkdownDescription: "List of user IDs that are members of this group.",
+						},
+						"member_groups": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Computed:            true,
+							MarkdownDescription: "List of group IDs that are members of this group.",
 						},
 						"created": schema.StringAttribute{
 							Computed:            true,
@@ -151,20 +158,38 @@ func (d *GroupsDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	data.IDs = make([]string, 0, len(listResp.Groups))
 
 	for _, group := range listResp.Groups {
-		// Convert member IDs
-		memberIDsList, diags := types.ListValueFrom(ctx, types.StringType, group.MemberIDs)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		// Convert member lists
+		var memberUsersList, memberGroupsList types.List
+		if len(group.MemberUsers) > 0 {
+			var diags diag.Diagnostics
+			memberUsersList, diags = types.ListValueFrom(ctx, types.StringType, group.MemberUsers)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		} else {
+			memberUsersList = types.ListNull(types.StringType)
+		}
+
+		if len(group.MemberGroups) > 0 {
+			var diags diag.Diagnostics
+			memberGroupsList, diags = types.ListValueFrom(ctx, types.StringType, group.MemberGroups)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		} else {
+			memberGroupsList = types.ListNull(types.StringType)
 		}
 
 		groupModel := GroupsDataSourceGroup{
-			ID:          types.StringValue(group.ID),
-			Name:        types.StringValue(group.Name),
-			OrgID:       types.StringValue(group.OrgID),
-			Description: types.StringValue(group.Description),
-			MemberIDs:   memberIDsList,
-			Created:     types.StringValue(group.Created),
+			ID:           types.StringValue(group.ID),
+			Name:         types.StringValue(group.Name),
+			OrgID:        types.StringValue(group.OrgID),
+			Description:  types.StringValue(group.Description),
+			MemberUsers:  memberUsersList,
+			MemberGroups: memberGroupsList,
+			Created:      types.StringValue(group.Created),
 		}
 
 		data.Groups = append(data.Groups, groupModel)

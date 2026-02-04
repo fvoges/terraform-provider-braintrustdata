@@ -52,4 +52,5 @@ output "group_members" {
 
 - `created` (String) The timestamp when the group was created.
 - `description` (String) A description of the group.
-- `member_ids` (List of String) List of user IDs that are members of this group.
+- `member_groups` (List of String) List of group IDs that are members of this group.
+- `member_users` (List of String) List of user IDs that are members of this group.
