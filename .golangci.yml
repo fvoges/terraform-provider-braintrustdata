@@ -27,10 +27,6 @@ run:
   tests: true
   modules-download-mode: readonly
 
-issues:
-  max-per-linter: 0
-  max-same: 0
-
 output:
   formats:
     json:
