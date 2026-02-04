@@ -3,10 +3,10 @@ module github.com/braintrustdata/terraform-provider-braintrustdata
 go 1.25.6
 
 require (
-	github.com/hashicorp/terraform-plugin-framework v1.15.0
+	github.com/hashicorp/terraform-plugin-framework v1.16.1
+	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	golang.org/x/time v0.14.0
 )
 
 require (
