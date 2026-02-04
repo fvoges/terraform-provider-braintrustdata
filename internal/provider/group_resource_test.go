@@ -47,10 +47,12 @@ func TestAccGroupResource_WithMembers(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
+				// Create a group with members (both user and group)
 				Config: testAccGroupResourceConfigWithMembers(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("braintrustdata_group.test", "name", "test-group-members"),
 					resource.TestCheckResourceAttr("braintrustdata_group.test", "member_ids.#", "2"),
+					resource.TestCheckResourceAttr("braintrustdata_group.member", "name", "test-member-group"),
 				),
 			},
 		},
@@ -68,10 +70,20 @@ resource "braintrustdata_group" "test" {
 
 func testAccGroupResourceConfigWithMembers() string {
 	return `
+resource "braintrustdata_group" "member" {
+  name        = "test-member-group"
+  description = "Group used as a member"
+}
+
 resource "braintrustdata_group" "test" {
   name        = "test-group-members"
-  description = "Group with members"
-  member_ids  = ["user-1", "user-2"]
+  description = "Group with both user and group members"
+  # member_ids can contain both user IDs and group IDs
+  # Using a real user ID from the API and a group created in this test
+  member_ids  = [
+    "866a8a8a-fee9-4a5b-8278-12970de499c2",  # Real user ID (TODO: replace with data source)
+    braintrustdata_group.member.id
+  ]
 }
 `
 }
