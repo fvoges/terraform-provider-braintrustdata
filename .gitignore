@@ -52,3 +52,6 @@ vendor/
 
 # Claude Code configuration
 .claude/
+
+# Git worktrees for parallel development
+.worktrees/
