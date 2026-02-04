@@ -139,7 +139,8 @@ func (p *BraintrustProvider) Resources(ctx context.Context) []func() resource.Re
 // DataSources defines the data sources implemented in the provider.
 func (p *BraintrustProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// Data sources will be added in later phases
+		NewGroupDataSource,
+		NewGroupsDataSource,
 	}
 }
 

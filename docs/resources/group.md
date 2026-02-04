@@ -13,6 +13,14 @@ Manages a Braintrust group. Groups are collections of users that can be assigned
 ## Example Usage
 
 ```terraform
+terraform {
+  required_providers {
+    braintrustdata = {
+      source = "braintrustdata/braintrustdata"
+    }
+  }
+}
+
 # Create a simple group
 resource "braintrustdata_group" "ml_team" {
   name        = "ml-team"

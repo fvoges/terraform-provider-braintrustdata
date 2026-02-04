@@ -48,7 +48,7 @@ export BRAINTRUST_ORG_ID="org-***"
 terraform {
   required_providers {
     braintrustdata = {
-      source = "registry.terraform.io/braintrustdata/braintrustdata"
+      source  = "registry.terraform.io/braintrustdata/braintrustdata"
       version = "0.1.0"
     }
   }
