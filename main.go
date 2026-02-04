@@ -1,3 +1,4 @@
+// Package main provides the Terraform provider entry point for Braintrust.
 package main
 
 import (
@@ -10,7 +11,7 @@ import (
 )
 
 // version will be set by the goreleaser build process
-var version string = "dev"
+var version = "dev"
 
 func main() {
 	var debug bool

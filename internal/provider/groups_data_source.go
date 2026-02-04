@@ -13,6 +13,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ datasource.DataSource = &GroupsDataSource{}
 
+// NewGroupsDataSource creates a new groups data source instance.
 func NewGroupsDataSource() datasource.DataSource {
 	return &GroupsDataSource{}
 }
@@ -39,11 +40,13 @@ type GroupsDataSourceGroup struct {
 	Created     types.String `tfsdk:"created"`
 }
 
-func (d *GroupsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+// Metadata implements datasource.DataSource.
+func (d *GroupsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_groups"
 }
 
-func (d *GroupsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+// Schema implements datasource.DataSource.
+func (d *GroupsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Lists all Braintrust groups in an organization.",
 
@@ -95,7 +98,8 @@ func (d *GroupsDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 	}
 }
 
-func (d *GroupsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+// Configure implements datasource.DataSource.
+func (d *GroupsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}

@@ -17,6 +17,7 @@ import (
 var _ resource.Resource = &GroupResource{}
 var _ resource.ResourceWithImportState = &GroupResource{}
 
+// NewGroupResource creates a new group resource instance.
 func NewGroupResource() resource.Resource {
 	return &GroupResource{}
 }
@@ -36,11 +37,13 @@ type GroupResourceModel struct {
 	Created     types.String `tfsdk:"created"`
 }
 
-func (r *GroupResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+// Metadata implements resource.Resource.
+func (r *GroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_group"
 }
 
-func (r *GroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+// Schema implements resource.Resource.
+func (r *GroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a Braintrust group. Groups are collections of users that can be assigned permissions via ACLs.",
 
@@ -82,7 +85,8 @@ func (r *GroupResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 	}
 }
 
-func (r *GroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+// Configure implements resource.Resource.
+func (r *GroupResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -100,6 +104,7 @@ func (r *GroupResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = client
 }
 
+// Create implements resource.Resource by creating a new group.
 func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data GroupResourceModel
 
@@ -193,6 +198,7 @@ func (r *GroupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// Update implements resource.Resource by updating an existing group.
 func (r *GroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data GroupResourceModel
 	var state GroupResourceModel
@@ -238,6 +244,7 @@ func (r *GroupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// Delete implements resource.Resource by deleting a group.
 func (r *GroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data GroupResourceModel
 
@@ -256,6 +263,7 @@ func (r *GroupResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 }
 
+// ImportState implements resource.ResourceWithImportState by importing a group by ID.
 func (r *GroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

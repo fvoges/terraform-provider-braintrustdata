@@ -31,13 +31,13 @@ type BraintrustProviderModel struct {
 }
 
 // Metadata returns the provider type name.
-func (p *BraintrustProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *BraintrustProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "braintrustdata"
 	resp.Version = p.version
 }
 
 // Schema defines the provider-level schema for configuration data.
-func (p *BraintrustProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *BraintrustProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Terraform provider for Braintrust (braintrust.dev), enabling infrastructure-as-code " +
 			"management of projects, experiments, datasets, prompts, functions, and access control.",
@@ -130,14 +130,14 @@ func (p *BraintrustProvider) Configure(ctx context.Context, req provider.Configu
 }
 
 // Resources defines the resources implemented in the provider.
-func (p *BraintrustProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewGroupResource,
 	}
 }
 
 // DataSources defines the data sources implemented in the provider.
-func (p *BraintrustProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *BraintrustProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewGroupDataSource,
 		NewGroupsDataSource,

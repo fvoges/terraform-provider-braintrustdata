@@ -1,3 +1,4 @@
+// Package provider implements Terraform resources and data sources for Braintrust.
 package provider
 
 import (
@@ -13,6 +14,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ datasource.DataSource = &GroupDataSource{}
 
+// NewGroupDataSource creates a new group data source instance.
 func NewGroupDataSource() datasource.DataSource {
 	return &GroupDataSource{}
 }
@@ -32,11 +34,13 @@ type GroupDataSourceModel struct {
 	Created     types.String `tfsdk:"created"`
 }
 
-func (d *GroupDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+// Metadata implements datasource.DataSource.
+func (d *GroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_group"
 }
 
-func (d *GroupDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+// Schema implements datasource.DataSource.
+func (d *GroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Reads a Braintrust group by ID or name. Specify either `id` or `name`.",
 
@@ -73,7 +77,8 @@ func (d *GroupDataSource) Schema(ctx context.Context, req datasource.SchemaReque
 	}
 }
 
-func (d *GroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+// Configure implements datasource.DataSource.
+func (d *GroupDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}

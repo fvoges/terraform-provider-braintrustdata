@@ -1,3 +1,4 @@
+// Package client provides HTTP client functionality for the Braintrust API.
 package client
 
 import (

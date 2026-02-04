@@ -76,7 +76,7 @@ resource "braintrustdata_group" "test" {
 `
 }
 
-func testAccPreCheck(t *testing.T) {
+func testAccPreCheck(_ *testing.T) {
 	// This function is called before running acceptance tests
 	// Check for required environment variables
 	// Currently no-op since provider handles validation
