@@ -58,7 +58,7 @@ jobs:
           echo "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes." >> release-notes.md
 
       - name: Update release with notes
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           body_path: release-notes.md
           draft: false
