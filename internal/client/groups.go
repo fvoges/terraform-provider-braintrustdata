@@ -11,9 +11,9 @@ type Group struct {
 	Name        string   `json:"name"`
 	OrgID       string   `json:"org_id,omitempty"`
 	Description string   `json:"description,omitempty"`
-	MemberIDs   []string `json:"member_ids,omitempty"`
 	Created     string   `json:"created,omitempty"`
 	DeletedAt   string   `json:"deleted_at,omitempty"`
+	MemberIDs   []string `json:"member_ids,omitempty"`
 }
 
 // CreateGroupRequest represents a request to create a group
@@ -34,14 +34,14 @@ type UpdateGroupRequest struct {
 // ListGroupsOptions represents options for listing groups
 type ListGroupsOptions struct {
 	OrgID  string
-	Limit  int
 	Cursor string
+	Limit  int
 }
 
 // ListGroupsResponse represents a list of groups
 type ListGroupsResponse struct {
-	Groups []Group `json:"objects"`
 	Cursor string  `json:"cursor,omitempty"`
+	Groups []Group `json:"objects"`
 }
 
 // CreateGroup creates a new group

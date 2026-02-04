@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -127,7 +128,8 @@ func TestGetGroup_NotFound(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	apiErr, ok := err.(*APIError)
+	apiErr := &APIError{}
+	ok := errors.As(err, &apiErr)
 	if !ok {
 		t.Fatalf("expected *APIError, got %T", err)
 	}

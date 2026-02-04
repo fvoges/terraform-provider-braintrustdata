@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,10 +44,10 @@ func TestAPIError_Error(t *testing.T) {
 func TestDo_APIErrorHandling(t *testing.T) {
 	tests := []struct {
 		name           string
-		statusCode     int
 		responseBody   string
-		expectedStatus int
 		expectedMsg    string
+		statusCode     int
+		expectedStatus int
 	}{
 		{
 			name:           "404 not found",
@@ -94,7 +95,8 @@ func TestDo_APIErrorHandling(t *testing.T) {
 				t.Fatal("expected error, got nil")
 			}
 
-			apiErr, ok := err.(*APIError)
+			apiErr := &APIError{}
+			ok := errors.As(err, &apiErr)
 			if !ok {
 				t.Fatalf("expected *APIError, got %T: %v", err, err)
 			}

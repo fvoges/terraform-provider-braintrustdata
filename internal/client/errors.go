@@ -2,15 +2,16 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 )
 
 // APIError represents an error response from the Braintrust API
 type APIError struct {
-	StatusCode int
-	Message    string
 	Details    map[string]interface{}
+	Message    string
+	StatusCode int
 }
 
 // Error implements the error interface
@@ -27,9 +28,9 @@ func parseAPIError(statusCode int, body []byte) error {
 
 	// Try to parse as JSON
 	var errResp struct {
+		Details map[string]interface{} `json:"details"`
 		Error   string                 `json:"error"`
 		Message string                 `json:"message"`
-		Details map[string]interface{} `json:"details"`
 	}
 
 	if err := json.Unmarshal(body, &errResp); err == nil {
@@ -72,7 +73,8 @@ func sanitizeSensitiveData(msg string) string {
 
 // IsNotFound returns true if the error is a 404 Not Found
 func IsNotFound(err error) bool {
-	if apiErr, ok := err.(*APIError); ok {
+	apiErr := &APIError{}
+	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == 404
 	}
 	return false
@@ -80,7 +82,8 @@ func IsNotFound(err error) bool {
 
 // IsRateLimited returns true if the error is a 429 Too Many Requests
 func IsRateLimited(err error) bool {
-	if apiErr, ok := err.(*APIError); ok {
+	apiErr := &APIError{}
+	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == 429
 	}
 	return false
@@ -88,7 +91,8 @@ func IsRateLimited(err error) bool {
 
 // IsUnauthorized returns true if the error is a 401 Unauthorized
 func IsUnauthorized(err error) bool {
-	if apiErr, ok := err.(*APIError); ok {
+	apiErr := &APIError{}
+	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == 401
 	}
 	return false
