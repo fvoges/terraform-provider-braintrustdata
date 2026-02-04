@@ -122,7 +122,6 @@ resource "braintrustdata_acl" "test" {
   object_id   = braintrustdata_project.test.id
   object_type = "project"
   role_id     = braintrustdata_role.test.id
-  permission  = "read"
 }
 `
 }
