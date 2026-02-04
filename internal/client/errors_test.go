@@ -81,9 +81,9 @@ func TestDo_APIErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.responseBody))
+				_, _ = w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
 
@@ -110,11 +110,11 @@ func TestDo_APIErrorHandling(t *testing.T) {
 
 // TestDo_SensitiveDataSanitization verifies API keys are not leaked in errors
 func TestDo_SensitiveDataSanitization(t *testing.T) {
-	apiKey := "sk-secret-key-12345"
+	apiKey := "sk-secret-key-12345" //nolint:gosec // Test credential
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		// Echo the auth header in response (simulating a server error that leaks data)
-		w.Write([]byte(`{"error": "Invalid token: ` + r.Header.Get("Authorization") + `"}`))
+		_, _ = w.Write([]byte(`{"error": "Invalid token: ` + r.Header.Get("Authorization") + `"}`))
 	}))
 	defer server.Close()
 

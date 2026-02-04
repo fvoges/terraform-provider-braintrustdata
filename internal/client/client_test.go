@@ -78,7 +78,7 @@ func TestNewClient_HTTPSOnlyEnforcement(t *testing.T) {
 
 // TestAuthHeader verifies Bearer token authentication is added correctly
 func TestAuthHeader(t *testing.T) {
-	apiKey := "sk-test-key-123"
+	apiKey := "sk-test-key-123" //nolint:gosec // Test credential
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		expectedAuth := "Bearer " + apiKey
@@ -86,7 +86,7 @@ func TestAuthHeader(t *testing.T) {
 			t.Errorf("expected Authorization header %q, got %q", expectedAuth, authHeader)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"success": true}`))
+		_, _ = w.Write([]byte(`{"success": true}`))
 	}))
 	defer server.Close()
 
@@ -105,7 +105,7 @@ func TestAuthHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Test code
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
@@ -120,7 +120,7 @@ func TestUserAgent(t *testing.T) {
 			t.Errorf("expected User-Agent to start with terraform-provider-braintrustdata/, got %q", ua)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer server.Close()
 
@@ -138,7 +138,7 @@ func TestUserAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Test code
 }
 
 // TestHTTPTimeout verifies timeout is configured
@@ -178,7 +178,7 @@ func TestTLSConfiguration(t *testing.T) {
 // TestDo_ContextCancellation verifies context cancellation is handled
 func TestDo_ContextCancellation(t *testing.T) {
 	// Create a server that delays response
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * time.Second)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -207,7 +207,7 @@ func TestDo_Success(t *testing.T) {
 			t.Errorf("expected GET method, got %s", r.Method)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id": "test-123", "name": "Test"}`))
+		_, _ = w.Write([]byte(`{"id": "test-123", "name": "Test"}`))
 	}))
 	defer server.Close()
 

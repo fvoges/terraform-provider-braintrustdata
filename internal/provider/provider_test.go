@@ -60,11 +60,11 @@ func TestProviderConfigure_APIKey(t *testing.T) {
 // TestProviderConfigure_EnvironmentVariables verifies environment variable precedence
 func TestProviderConfigure_EnvironmentVariables(t *testing.T) {
 	// Set environment variables
-	os.Setenv("BRAINTRUST_API_KEY", "sk-env-test-key")
-	os.Setenv("BRAINTRUST_ORG_ID", "org-env-test")
+	_ = os.Setenv("BRAINTRUST_API_KEY", "sk-env-test-key")
+	_ = os.Setenv("BRAINTRUST_ORG_ID", "org-env-test")
 	defer func() {
-		os.Unsetenv("BRAINTRUST_API_KEY")
-		os.Unsetenv("BRAINTRUST_ORG_ID")
+		_ = os.Unsetenv("BRAINTRUST_API_KEY")
+		_ = os.Unsetenv("BRAINTRUST_ORG_ID")
 	}()
 
 	// Verify environment variables are set
@@ -96,8 +96,8 @@ func TestProviderConfigure_DefaultAPIURL(t *testing.T) {
 // TestProviderConfigure_ValidationRequired verifies API key is required
 func TestProviderConfigure_ValidationRequired(t *testing.T) {
 	// Clear environment variables to test validation
-	os.Unsetenv("BRAINTRUST_API_KEY")
-	os.Unsetenv("BRAINTRUST_ORG_ID")
+	_ = os.Unsetenv("BRAINTRUST_API_KEY")
+	_ = os.Unsetenv("BRAINTRUST_ORG_ID")
 
 	// Validation will be tested via acceptance tests
 	// This test documents the requirement
