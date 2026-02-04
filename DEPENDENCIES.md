@@ -45,9 +45,11 @@ Updated via: Dependabot (`.github/dependabot.yml`)
 
 | Tool | Version | How to Check | How to Update |
 |------|---------|--------------|---------------|
-| golangci-lint | v2.8.0 | `golangci-lint version` | `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest` |
+| golangci-lint | v2.8.0 | `golangci-lint version` | `brew install golangci-lint` or download from releases |
 | tfplugindocs | latest | `tfplugindocs version` | `go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest` |
 | pre-commit | latest | `pre-commit --version` | `pip install --upgrade pre-commit` |
+
+**Note**: golangci-lint v2 requires proper configuration. See `.golangci.yml` with `version: "2"` field.
 
 ## Checking for Updates
 
