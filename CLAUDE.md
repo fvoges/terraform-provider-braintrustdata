@@ -65,6 +65,39 @@ go list -m -u all
 - Compatibility issues
 - Technical debt accumulation
 
+## Local Development Setup
+
+### Required Tools
+
+Install these tools before starting development:
+
+```bash
+# Go (required)
+# Download from https://go.dev/dl/ or use version manager
+
+# Terraform (required for testing examples)
+brew install terraform
+
+# golangci-lint (required for linting)
+brew install golangci-lint
+
+# tfplugindocs (required for documentation generation)
+go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+
+# pre-commit (optional but recommended)
+pip install pre-commit
+make pre-commit-install
+```
+
+### Verify Installation
+
+```bash
+go version          # Should be 1.25.6+
+terraform version   # Should be 1.14.x+
+golangci-lint version  # Should be v2.8.0+
+tfplugindocs version   # Should show usage
+```
+
 ## Essential Commands
 
 ### Development Workflow
