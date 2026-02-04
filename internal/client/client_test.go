@@ -134,10 +134,11 @@ func TestUserAgent(t *testing.T) {
 
 	client.addAuthHeader(req)
 
-	_, err = client.httpClient.Do(req)
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
+	defer resp.Body.Close()
 }
 
 // TestHTTPTimeout verifies timeout is configured
