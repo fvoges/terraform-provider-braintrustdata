@@ -86,6 +86,56 @@ func TestAccExperimentResource_PublicToggle(t *testing.T) {
 	})
 }
 
+func TestAccExperimentResource_StatePersistence(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccExperimentResourceConfig("state-test", "State persistence test"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Verify name and description are persisted in state after create
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "name", "state-test"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "description", "State persistence test"),
+				),
+			},
+			{
+				// Refresh state and verify no drift
+				RefreshState: true,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "name", "state-test"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "description", "State persistence test"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccExperimentResource_MetadataClearing(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Create with metadata
+				Config: testAccExperimentResourceConfigWithMetadataAndTags(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "metadata.environment", "test"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "metadata.version", "1.0"),
+				),
+			},
+			{
+				// Remove metadata to verify clearing works
+				Config: testAccExperimentResourceConfigWithoutMetadata(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "name", "test-experiment-metadata"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "metadata.%", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccExperimentResourceConfig(name, description string) string {
 	return fmt.Sprintf(`
 resource "braintrustdata_project" "test" {
@@ -133,4 +183,19 @@ resource "braintrustdata_experiment" "test" {
   public     = %[2]t
 }
 `, name, public)
+}
+
+func testAccExperimentResourceConfigWithoutMetadata() string {
+	return `
+resource "braintrustdata_project" "test" {
+  name = "test-project-for-experiment"
+}
+
+resource "braintrustdata_experiment" "test" {
+  project_id  = braintrustdata_project.test.id
+  name        = "test-experiment-metadata"
+  description = "Experiment with metadata removed"
+  tags        = ["ml", "production"]
+}
+`
 }

@@ -271,6 +271,27 @@ func TestDeleteExperiment(t *testing.T) {
 	}
 }
 
+// TestDeleteExperiment_NotFound verifies 404 handling for delete (idempotency)
+func TestDeleteExperiment_NotFound(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Experiment not found",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	err := client.DeleteExperiment(context.Background(), "nonexistent-id")
+
+	// Should return NotFoundError
+	if !IsNotFound(err) {
+		t.Fatalf("expected NotFoundError, got: %v", err)
+	}
+}
+
 // TestListExperiments verifies experiment listing
 func TestListExperiments(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

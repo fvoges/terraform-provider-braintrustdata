@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -138,14 +137,14 @@ func (r *ExperimentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Convert metadata from Terraform Map to Go map
-	var metadata map[string]interface{}
+	// Initialize as empty map so null metadata explicitly clears server-side values
+	metadata := make(map[string]interface{})
 	if !data.Metadata.IsNull() {
 		metadataMap := make(map[string]string)
 		resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadataMap, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		metadata = make(map[string]interface{})
 		for k, v := range metadataMap {
 			metadata[k] = v
 		}
@@ -192,6 +191,12 @@ func (r *ExperimentResource) Create(ctx context.Context, req resource.CreateRequ
 	// Update model with response data
 	data.ID = types.StringValue(experiment.ID)
 	data.ProjectID = types.StringValue(experiment.ProjectID)
+	data.Name = types.StringValue(experiment.Name)
+	if experiment.Description != "" {
+		data.Description = types.StringValue(experiment.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.Created = types.StringValue(experiment.Created)
 	data.UserID = types.StringValue(experiment.UserID)
 	data.OrgID = types.StringValue(experiment.OrgID)
@@ -199,11 +204,11 @@ func (r *ExperimentResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Convert metadata from Go map to Terraform Map
 	if len(experiment.Metadata) > 0 {
-		metadataMap := make(map[string]attr.Value)
+		metadataStrings := make(map[string]string)
 		for k, v := range experiment.Metadata {
-			metadataMap[k] = types.StringValue(fmt.Sprintf("%v", v))
+			metadataStrings[k] = fmt.Sprintf("%v", v)
 		}
-		metadataValue, diags := types.MapValue(types.StringType, metadataMap)
+		metadataValue, diags := types.MapValueFrom(ctx, types.StringType, metadataStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -267,11 +272,11 @@ func (r *ExperimentResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	// Convert metadata from Go map to Terraform Map
 	if len(experiment.Metadata) > 0 {
-		metadataMap := make(map[string]attr.Value)
+		metadataStrings := make(map[string]string)
 		for k, v := range experiment.Metadata {
-			metadataMap[k] = types.StringValue(fmt.Sprintf("%v", v))
+			metadataStrings[k] = fmt.Sprintf("%v", v)
 		}
-		metadataValue, diags := types.MapValue(types.StringType, metadataMap)
+		metadataValue, diags := types.MapValueFrom(ctx, types.StringType, metadataStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -309,15 +314,31 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	// Validate required fields are not unknown or null
+	if data.ID.IsNull() || data.ID.IsUnknown() || data.ID.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Plan",
+			"Cannot update experiment because id is unknown or empty.",
+		)
+		return
+	}
+	if data.Name.IsUnknown() {
+		resp.Diagnostics.AddError(
+			"Invalid Plan",
+			"Cannot update experiment because name is unknown.",
+		)
+		return
+	}
+
 	// Convert metadata from Terraform Map to Go map
-	var metadata map[string]interface{}
+	// Initialize as empty map so null metadata explicitly clears server-side values
+	metadata := make(map[string]interface{})
 	if !data.Metadata.IsNull() {
 		metadataMap := make(map[string]string)
 		resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadataMap, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		metadata = make(map[string]interface{})
 		for k, v := range metadataMap {
 			metadata[k] = v
 		}
@@ -360,11 +381,11 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Convert metadata from Go map to Terraform Map
 	if len(experiment.Metadata) > 0 {
-		metadataMap := make(map[string]attr.Value)
+		metadataStrings := make(map[string]string)
 		for k, v := range experiment.Metadata {
-			metadataMap[k] = types.StringValue(fmt.Sprintf("%v", v))
+			metadataStrings[k] = fmt.Sprintf("%v", v)
 		}
-		metadataValue, diags := types.MapValue(types.StringType, metadataMap)
+		metadataValue, diags := types.MapValueFrom(ctx, types.StringType, metadataStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -410,6 +431,10 @@ func (r *ExperimentResource) Delete(ctx context.Context, req resource.DeleteRequ
 	err := r.client.DeleteExperiment(ctx, data.ID.ValueString())
 
 	if err != nil {
+		// Treat 404 as success (already deleted) for idempotency
+		if client.IsNotFound(err) {
+			return
+		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete experiment, got error: %s", err))
 		return
 	}
