@@ -207,7 +207,11 @@ func (r *ExperimentResource) Create(ctx context.Context, req resource.CreateRequ
 		data.Description = types.StringNull()
 	}
 	data.Created = types.StringValue(experiment.Created)
-	data.UserID = types.StringValue(experiment.UserID)
+	if experiment.UserID != "" {
+		data.UserID = types.StringValue(experiment.UserID)
+	} else {
+		data.UserID = types.StringNull()
+	}
 	data.OrgID = types.StringValue(experiment.OrgID)
 	data.Public = types.BoolValue(experiment.Public)
 
@@ -279,7 +283,11 @@ func (r *ExperimentResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 	data.ProjectID = types.StringValue(experiment.ProjectID)
 	data.Created = types.StringValue(experiment.Created)
-	data.UserID = types.StringValue(experiment.UserID)
+	if experiment.UserID != "" {
+		data.UserID = types.StringValue(experiment.UserID)
+	} else {
+		data.UserID = types.StringNull()
+	}
 	data.OrgID = types.StringValue(experiment.OrgID)
 	data.Public = types.BoolValue(experiment.Public)
 
