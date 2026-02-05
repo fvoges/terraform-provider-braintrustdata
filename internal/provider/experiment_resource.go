@@ -146,9 +146,9 @@ func (r *ExperimentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Convert metadata from Terraform Map to Go map
-	// Initialize as empty map so null metadata explicitly clears server-side values
-	metadata := make(map[string]interface{})
+	var metadata map[string]interface{}
 	if !data.Metadata.IsNull() {
+		metadata = make(map[string]interface{})
 		metadataMap := make(map[string]string)
 		resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadataMap, false)...)
 		if resp.Diagnostics.HasError() {
@@ -272,7 +272,11 @@ func (r *ExperimentResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	// Update model with response data
 	data.Name = types.StringValue(experiment.Name)
-	data.Description = types.StringValue(experiment.Description)
+	if experiment.Description != "" {
+		data.Description = types.StringValue(experiment.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.ProjectID = types.StringValue(experiment.ProjectID)
 	data.Created = types.StringValue(experiment.Created)
 	data.UserID = types.StringValue(experiment.UserID)
@@ -340,9 +344,10 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Convert metadata from Terraform Map to Go map
-	// Initialize as empty map so null metadata explicitly clears server-side values
-	metadata := make(map[string]interface{})
-	if !data.Metadata.IsNull() {
+	// Use pointer to distinguish between clearing (empty map) and omitting (nil)
+	var metadataPtr *map[string]interface{}
+	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+		metadata := make(map[string]interface{})
 		metadataMap := make(map[string]string)
 		resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadataMap, false)...)
 		if resp.Diagnostics.HasError() {
@@ -351,7 +356,13 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 		for k, v := range metadataMap {
 			metadata[k] = v
 		}
+		metadataPtr = &metadata
+	} else if data.Metadata.IsNull() {
+		// Explicitly clear metadata by sending empty map
+		emptyMetadata := make(map[string]interface{})
+		metadataPtr = &emptyMetadata
 	}
+	// If IsUnknown, metadataPtr remains nil and field is omitted from request
 
 	// Convert tags from Terraform Set to Go slice
 	var tags []string
@@ -374,7 +385,7 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 		Name:        data.Name.ValueString(),
 		Description: data.Description.ValueString(),
 		Public:      publicPtr,
-		Metadata:    metadata,
+		Metadata:    metadataPtr,
 		Tags:        tags,
 	})
 

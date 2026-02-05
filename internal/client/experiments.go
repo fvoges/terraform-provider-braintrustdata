@@ -42,11 +42,11 @@ type CreateExperimentRequest struct {
 
 // UpdateExperimentRequest represents a request to update an experiment
 type UpdateExperimentRequest struct {
-	Name        string                 `json:"name,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Public      *bool                  `json:"public,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
+	Name        string                  `json:"name,omitempty"`
+	Description string                  `json:"description,omitempty"`
+	Public      *bool                   `json:"public,omitempty"`
+	Metadata    *map[string]interface{} `json:"metadata"`
+	Tags        []string                `json:"tags,omitempty"`
 }
 
 // ListExperimentsOptions represents options for listing experiments

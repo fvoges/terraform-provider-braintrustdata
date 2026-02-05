@@ -196,13 +196,19 @@ func TestUpdateExperiment(t *testing.T) {
 			public = *req.Public
 		}
 
+		// Handle metadata pointer
+		var metadata map[string]interface{}
+		if req.Metadata != nil {
+			metadata = *req.Metadata
+		}
+
 		resp := Experiment{
 			ID:          "experiment-123",
 			ProjectID:   "project-123",
 			Name:        req.Name,
 			Description: req.Description,
 			Public:      public,
-			Metadata:    req.Metadata,
+			Metadata:    metadata,
 			Tags:        req.Tags,
 			Created:     time.Now().Format(time.RFC3339),
 			UserID:      "user-123",
@@ -218,14 +224,15 @@ func TestUpdateExperiment(t *testing.T) {
 	client.httpClient = server.Client()
 
 	publicFalse := false
+	metadata := map[string]interface{}{
+		"updated": true,
+	}
 	experiment, err := client.UpdateExperiment(context.Background(), "experiment-123", &UpdateExperimentRequest{
 		Name:        "Updated Experiment",
 		Description: "Updated description",
 		Public:      &publicFalse,
-		Metadata: map[string]interface{}{
-			"updated": true,
-		},
-		Tags: []string{"updated"},
+		Metadata:    &metadata,
+		Tags:        []string{"updated"},
 	})
 
 	if err != nil {
