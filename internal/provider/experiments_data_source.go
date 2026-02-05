@@ -25,10 +25,10 @@ type ExperimentsDataSource struct {
 
 // ExperimentsDataSourceModel describes the data source data model.
 type ExperimentsDataSourceModel struct {
-	ProjectID   types.String                     `tfsdk:"project_id"`
-	Name        types.String                     `tfsdk:"name"`
+	ProjectID   types.String                      `tfsdk:"project_id"`
+	Name        types.String                      `tfsdk:"name"`
 	Experiments []ExperimentsDataSourceExperiment `tfsdk:"experiments"`
-	IDs         []string                         `tfsdk:"ids"`
+	IDs         []string                          `tfsdk:"ids"`
 }
 
 // ExperimentsDataSourceExperiment represents a single experiment in the list.
@@ -174,56 +174,56 @@ func (d *ExperimentsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		}
 
 		for _, experiment := range listResp.Experiments {
-		if experiment.DeletedAt != "" {
-			continue
-		}
-
-		if nameFilter != "" && experiment.Name != nameFilter {
-			continue
-		}
-
-		var metadataMap types.Map
-		if len(experiment.Metadata) > 0 {
-			metadata := make(map[string]string)
-			for k, v := range experiment.Metadata {
-				metadata[k] = fmt.Sprintf("%v", v)
+			if experiment.DeletedAt != "" {
+				continue
 			}
-			var diags diag.Diagnostics
-			metadataMap, diags = types.MapValueFrom(ctx, types.StringType, metadata)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
+
+			if nameFilter != "" && experiment.Name != nameFilter {
+				continue
 			}
-		} else {
-			metadataMap = types.MapNull(types.StringType)
-		}
 
-		var tagsSet types.Set
-		if len(experiment.Tags) > 0 {
-			var diags diag.Diagnostics
-			tagsSet, diags = types.SetValueFrom(ctx, types.StringType, experiment.Tags)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
+			var metadataMap types.Map
+			if len(experiment.Metadata) > 0 {
+				metadata := make(map[string]string)
+				for k, v := range experiment.Metadata {
+					metadata[k] = fmt.Sprintf("%v", v)
+				}
+				var diags diag.Diagnostics
+				metadataMap, diags = types.MapValueFrom(ctx, types.StringType, metadata)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+			} else {
+				metadataMap = types.MapNull(types.StringType)
 			}
-		} else {
-			tagsSet = types.SetNull(types.StringType)
-		}
 
-		experimentModel := ExperimentsDataSourceExperiment{
-			ID:          types.StringValue(experiment.ID),
-			Name:        types.StringValue(experiment.Name),
-			ProjectID:   types.StringValue(experiment.ProjectID),
-			Description: types.StringValue(experiment.Description),
-			Created:     types.StringValue(experiment.Created),
-			Public:      types.BoolValue(experiment.Public),
-			Metadata:    metadataMap,
-			Tags:        tagsSet,
-		}
+			var tagsSet types.Set
+			if len(experiment.Tags) > 0 {
+				var diags diag.Diagnostics
+				tagsSet, diags = types.SetValueFrom(ctx, types.StringType, experiment.Tags)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+			} else {
+				tagsSet = types.SetNull(types.StringType)
+			}
 
-		data.Experiments = append(data.Experiments, experimentModel)
-		data.IDs = append(data.IDs, experiment.ID)
-	}
+			experimentModel := ExperimentsDataSourceExperiment{
+				ID:          types.StringValue(experiment.ID),
+				Name:        types.StringValue(experiment.Name),
+				ProjectID:   types.StringValue(experiment.ProjectID),
+				Description: types.StringValue(experiment.Description),
+				Created:     types.StringValue(experiment.Created),
+				Public:      types.BoolValue(experiment.Public),
+				Metadata:    metadataMap,
+				Tags:        tagsSet,
+			}
+
+			data.Experiments = append(data.Experiments, experimentModel)
+			data.IDs = append(data.IDs, experiment.ID)
+		}
 
 		// Exit loop if no more pages
 		if listResp.Cursor == "" {
