@@ -94,14 +94,23 @@ func (r *ExperimentResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"created": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The timestamp when the experiment was created.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the user who created the experiment.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"org_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the organization this experiment belongs to.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -376,7 +385,11 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Update model with response data
 	data.Name = types.StringValue(experiment.Name)
-	data.Description = types.StringValue(experiment.Description)
+	if experiment.Description != "" {
+		data.Description = types.StringValue(experiment.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.Public = types.BoolValue(experiment.Public)
 
 	// Convert metadata from Go map to Terraform Map
