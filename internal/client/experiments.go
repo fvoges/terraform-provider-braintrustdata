@@ -45,7 +45,7 @@ type UpdateExperimentRequest struct {
 	Name        string                  `json:"name,omitempty"`
 	Description string                  `json:"description,omitempty"`
 	Public      *bool                   `json:"public,omitempty"`
-	Metadata    *map[string]interface{} `json:"metadata"`
+	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
 	Tags        []string                `json:"tags,omitempty"`
 }
 
