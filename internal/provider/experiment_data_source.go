@@ -129,7 +129,7 @@ func (d *ExperimentDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if hasID && (hasName || hasProjectID) {
 		resp.Diagnostics.AddError(
 			"Conflicting Attributes",
-			"Cannot specify both 'id' and 'name'/'project_id'. Please specify only one lookup method.",
+			"Cannot specify both 'id' and 'name'",
 		)
 		return
 	}
