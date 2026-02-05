@@ -62,6 +62,9 @@ func (r *ProjectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"org_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The organization ID that the project belongs to.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
@@ -70,10 +73,16 @@ func (r *ProjectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"created": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The timestamp when the project was created.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the user who created the project.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
