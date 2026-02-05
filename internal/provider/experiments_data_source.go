@@ -150,17 +150,6 @@ func (d *ExperimentsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	listResp, err := d.client.ListExperiments(ctx, &client.ListExperimentsOptions{
-		ProjectID: projectID,
-	})
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Listing Experiments",
-			fmt.Sprintf("Could not list experiments: %s", err.Error()),
-		)
-		return
-	}
-
 	nameFilter := ""
 	if !data.Name.IsNull() && data.Name.ValueString() != "" {
 		nameFilter = data.Name.ValueString()
@@ -169,7 +158,22 @@ func (d *ExperimentsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	data.Experiments = make([]ExperimentsDataSourceExperiment, 0)
 	data.IDs = make([]string, 0)
 
-	for _, experiment := range listResp.Experiments {
+	// Paginate through all experiments
+	cursor := ""
+	for {
+		listResp, err := d.client.ListExperiments(ctx, &client.ListExperimentsOptions{
+			ProjectID: projectID,
+			Cursor:    cursor,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Listing Experiments",
+				fmt.Sprintf("Could not list experiments: %s", err.Error()),
+			)
+			return
+		}
+
+		for _, experiment := range listResp.Experiments {
 		if experiment.DeletedAt != "" {
 			continue
 		}
@@ -219,6 +223,13 @@ func (d *ExperimentsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 		data.Experiments = append(data.Experiments, experimentModel)
 		data.IDs = append(data.IDs, experiment.ID)
+	}
+
+		// Exit loop if no more pages
+		if listResp.Cursor == "" {
+			break
+		}
+		cursor = listResp.Cursor
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
