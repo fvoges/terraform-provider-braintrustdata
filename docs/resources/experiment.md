@@ -99,3 +99,12 @@ resource "braintrustdata_experiment" "complete" {
 - `id` (String) The unique identifier of the experiment.
 - `org_id` (String) The ID of the organization this experiment belongs to.
 - `user_id` (String) The ID of the user who created the experiment.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Experiments can be imported using their ID
+terraform import braintrustdata_experiment.example experiment-id-here
+```
