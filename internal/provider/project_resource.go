@@ -62,6 +62,9 @@ func (r *ProjectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"org_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The organization ID that the project belongs to.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
@@ -70,10 +73,16 @@ func (r *ProjectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"created": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The timestamp when the project was created.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the user who created the project.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -121,6 +130,12 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Update model with response data
 	data.ID = types.StringValue(project.ID)
+	data.Name = types.StringValue(project.Name)
+	if project.Description != "" {
+		data.Description = types.StringValue(project.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.OrgID = types.StringValue(project.OrgID)
 	data.Created = types.StringValue(project.Created)
 	if project.UserID != "" {
@@ -160,7 +175,11 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Update model with response data
 	data.Name = types.StringValue(project.Name)
-	data.Description = types.StringValue(project.Description)
+	if project.Description != "" {
+		data.Description = types.StringValue(project.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.OrgID = types.StringValue(project.OrgID)
 	data.Created = types.StringValue(project.Created)
 	if project.UserID != "" {
