@@ -121,7 +121,7 @@ func TestAccExperimentDataSource_NeitherIDNorName(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccExperimentDataSourceConfigNeitherIDNorName(),
-				ExpectError: regexp.MustCompile("Must specify either 'id' or 'name'"),
+				ExpectError: regexp.MustCompile("Must specify either 'id' or both 'name' and 'project_id'"),
 			},
 		},
 	})
