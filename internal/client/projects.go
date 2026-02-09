@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // Project represents a Braintrust project
@@ -59,7 +60,7 @@ func (c *Client) CreateProject(ctx context.Context, req *CreateProjectRequest) (
 // GetProject retrieves a project by ID
 func (c *Client) GetProject(ctx context.Context, id string) (*Project, error) {
 	var project Project
-	err := c.Do(ctx, "GET", fmt.Sprintf("/v1/project/%s", id), nil, &project)
+	err := c.Do(ctx, "GET", "/v1/project/"+url.PathEscape(id), nil, &project)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,7 @@ func (c *Client) GetProject(ctx context.Context, id string) (*Project, error) {
 // UpdateProject updates an existing project
 func (c *Client) UpdateProject(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error) {
 	var project Project
-	err := c.Do(ctx, "PATCH", fmt.Sprintf("/v1/project/%s", id), req, &project)
+	err := c.Do(ctx, "PATCH", "/v1/project/"+url.PathEscape(id), req, &project)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (c *Client) UpdateProject(ctx context.Context, id string, req *UpdateProjec
 
 // DeleteProject deletes a project (soft delete)
 func (c *Client) DeleteProject(ctx context.Context, id string) error {
-	return c.Do(ctx, "DELETE", fmt.Sprintf("/v1/project/%s", id), nil, nil)
+	return c.Do(ctx, "DELETE", "/v1/project/"+url.PathEscape(id), nil, nil)
 }
 
 // ListProjects lists all projects
