@@ -12,7 +12,7 @@ var ErrEmptyExperimentID = errors.New("experiment ID cannot be empty")
 
 // experimentPath returns the API path for a specific experiment
 func experimentPath(id string) string {
-	return fmt.Sprintf("/v1/experiment/%s", id)
+	return "/v1/experiment/" + url.PathEscape(id)
 }
 
 // Experiment represents a Braintrust experiment
