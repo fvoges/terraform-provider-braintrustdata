@@ -20,6 +20,35 @@ This is a Terraform provider for Braintrust (braintrust.dev) built using the Ter
 
 User wants commits and code to appear as if written by a human developer without AI assistance.
 
+### Coordinator Role - Never Code Directly
+
+**CRITICAL: Your role is COORDINATION ONLY. NEVER write code directly.**
+
+**You MUST delegate all coding work to specialized sub-agents:**
+- ✅ **DO**: Identify issues, launch sub-agents (Task tool), review output, manage PRs
+- ❌ **NEVER**: Use Edit, Write, or directly modify implementation files
+- ❌ **NEVER**: Fix bugs, add features, or write code yourself
+
+**Process for ANY code change:**
+1. Launch general-purpose sub-agent using Task tool
+2. Provide clear task description and context
+3. Let the sub-agent write/edit code
+4. Review their work
+5. Coordinate next steps
+
+**Examples of what requires sub-agents:**
+- Fixing bugs or lint errors
+- Adding features or tests
+- Modifying any `.go`, `.tf`, or implementation files
+- Creating new code files
+
+**Exceptions (you can do directly):**
+- Updating MEMORY.md or CLAUDE.md (documentation/process)
+- Managing GitHub issues, PRs, and review conversations
+- Running bash commands for git, gh CLI, status checks
+
+**This is non-negotiable.** Even for "quick fixes" - always delegate to sub-agents.
+
 ### Dependency Currency
 
 **ALWAYS ensure all tools and dependencies use current recommended versions.**
@@ -156,6 +185,13 @@ cd examples/resources/braintrustdata_group
 terraform init
 terraform apply
 ```
+
+## API Specification
+
+The Braintrust API is documented via OpenAPI specification:
+https://github.com/braintrustdata/braintrust-openapi
+
+This specification defines all API endpoints, request/response schemas, and field types used by the Terraform provider. When adding new resources, always consult the OpenAPI spec to ensure accurate field types and validation.
 
 ## Architecture
 
