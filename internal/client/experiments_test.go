@@ -196,13 +196,16 @@ func TestUpdateExperiment(t *testing.T) {
 			public = *req.Public
 		}
 
+		// Handle metadata
+		metadata := req.Metadata
+
 		resp := Experiment{
 			ID:          "experiment-123",
 			ProjectID:   "project-123",
 			Name:        req.Name,
 			Description: req.Description,
 			Public:      public,
-			Metadata:    req.Metadata,
+			Metadata:    metadata,
 			Tags:        req.Tags,
 			Created:     time.Now().Format(time.RFC3339),
 			UserID:      "user-123",
@@ -218,14 +221,15 @@ func TestUpdateExperiment(t *testing.T) {
 	client.httpClient = server.Client()
 
 	publicFalse := false
+	metadata := map[string]interface{}{
+		"updated": true,
+	}
 	experiment, err := client.UpdateExperiment(context.Background(), "experiment-123", &UpdateExperimentRequest{
 		Name:        "Updated Experiment",
 		Description: "Updated description",
 		Public:      &publicFalse,
-		Metadata: map[string]interface{}{
-			"updated": true,
-		},
-		Tags: []string{"updated"},
+		Metadata:    metadata,
+		Tags:        []string{"updated"},
 	})
 
 	if err != nil {
@@ -268,6 +272,27 @@ func TestDeleteExperiment(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// TestDeleteExperiment_NotFound verifies 404 handling for delete (idempotency)
+func TestDeleteExperiment_NotFound(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Experiment not found",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	err := client.DeleteExperiment(context.Background(), "nonexistent-id")
+
+	// Should return NotFoundError
+	if !IsNotFound(err) {
+		t.Fatalf("expected NotFoundError, got: %v", err)
 	}
 }
 
