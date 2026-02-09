@@ -130,6 +130,12 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Update model with response data
 	data.ID = types.StringValue(project.ID)
+	data.Name = types.StringValue(project.Name)
+	if project.Description != "" {
+		data.Description = types.StringValue(project.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.OrgID = types.StringValue(project.OrgID)
 	data.Created = types.StringValue(project.Created)
 	if project.UserID != "" {
@@ -169,7 +175,11 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Update model with response data
 	data.Name = types.StringValue(project.Name)
-	data.Description = types.StringValue(project.Description)
+	if project.Description != "" {
+		data.Description = types.StringValue(project.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.OrgID = types.StringValue(project.OrgID)
 	data.Created = types.StringValue(project.Created)
 	if project.UserID != "" {

@@ -29,12 +29,12 @@ type CreateRoleRequest struct {
 
 // UpdateRoleRequest represents a request to update a role
 type UpdateRoleRequest struct {
-	Name                     string   `json:"name,omitempty"`
-	Description              string   `json:"description,omitempty"`
-	AddMemberPermissions     []string `json:"add_member_permissions,omitempty"`
-	RemoveMemberPermissions  []string `json:"remove_member_permissions,omitempty"`
-	AddMemberRoles           []string `json:"add_member_roles,omitempty"`
-	RemoveMemberRoles        []string `json:"remove_member_roles,omitempty"`
+	Name                    string   `json:"name,omitempty"`
+	Description             string   `json:"description,omitempty"`
+	AddMemberPermissions    []string `json:"add_member_permissions,omitempty"`
+	RemoveMemberPermissions []string `json:"remove_member_permissions,omitempty"`
+	AddMemberRoles          []string `json:"add_member_roles,omitempty"`
+	RemoveMemberRoles       []string `json:"remove_member_roles,omitempty"`
 }
 
 // ListRolesOptions represents options for listing roles

@@ -134,6 +134,7 @@ func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewACLResource,
 		NewAPIKeyResource,
+		NewExperimentResource,
 		NewGroupResource,
 		NewProjectResource,
 		NewRoleResource,
@@ -143,6 +144,8 @@ func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Reso
 // DataSources defines the data sources implemented in the provider.
 func (p *BraintrustProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewExperimentDataSource,
+		NewExperimentsDataSource,
 		NewGroupDataSource,
 		NewGroupsDataSource,
 	}
