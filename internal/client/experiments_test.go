@@ -196,11 +196,8 @@ func TestUpdateExperiment(t *testing.T) {
 			public = *req.Public
 		}
 
-		// Handle metadata pointer
-		var metadata map[string]interface{}
-		if req.Metadata != nil {
-			metadata = *req.Metadata
-		}
+		// Handle metadata
+		metadata := req.Metadata
 
 		resp := Experiment{
 			ID:          "experiment-123",
@@ -231,7 +228,7 @@ func TestUpdateExperiment(t *testing.T) {
 		Name:        "Updated Experiment",
 		Description: "Updated description",
 		Public:      &publicFalse,
-		Metadata:    &metadata,
+		Metadata:    metadata,
 		Tags:        []string{"updated"},
 	})
 
