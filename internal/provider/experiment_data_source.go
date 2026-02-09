@@ -129,7 +129,7 @@ func (d *ExperimentDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if hasID && (hasName || hasProjectID) {
 		resp.Diagnostics.AddError(
 			"Conflicting Attributes",
-			"Cannot specify both 'id' and 'name'/'project_id'. Please specify only one lookup method.",
+			"Cannot specify both 'id' and 'name'",
 		)
 		return
 	}
@@ -147,25 +147,37 @@ func (d *ExperimentDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			return
 		}
 	} else {
-		listResp, err := d.client.ListExperiments(ctx, &client.ListExperimentsOptions{
-			ProjectID: data.ProjectID.ValueString(),
-		})
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Listing Experiments",
-				fmt.Sprintf("Could not list experiments to find name %s: %s", data.Name.ValueString(), err.Error()),
-			)
-			return
-		}
-
+		// Paginate through all experiments to find the one with matching name
 		var found *client.Experiment
-		for i := range listResp.Experiments {
-			if listResp.Experiments[i].Name == data.Name.ValueString() {
-				if listResp.Experiments[i].DeletedAt == "" {
-					found = &listResp.Experiments[i]
-					break
+		cursor := ""
+		for {
+			listResp, err := d.client.ListExperiments(ctx, &client.ListExperimentsOptions{
+				ProjectID: data.ProjectID.ValueString(),
+				Cursor:    cursor,
+			})
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error Listing Experiments",
+					fmt.Sprintf("Could not list experiments to find name %s: %s", data.Name.ValueString(), err.Error()),
+				)
+				return
+			}
+
+			// Scan current page for matching experiment
+			for i := range listResp.Experiments {
+				if listResp.Experiments[i].Name == data.Name.ValueString() {
+					if listResp.Experiments[i].DeletedAt == "" {
+						found = &listResp.Experiments[i]
+						break
+					}
 				}
 			}
+
+			// Exit loop if found or no more pages
+			if found != nil || listResp.Cursor == "" {
+				break
+			}
+			cursor = listResp.Cursor
 		}
 
 		if found == nil {

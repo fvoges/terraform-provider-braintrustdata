@@ -58,7 +58,8 @@ func TestAccExperimentsDataSource_WithFilter(t *testing.T) {
 			{
 				Config: testAccExperimentsDataSourceConfigWithFilter(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.braintrustdata_experiments.test", "experiments.#"),
+					resource.TestCheckResourceAttr("data.braintrustdata_experiments.test", "experiments.#", "1"),
+					resource.TestCheckResourceAttr("data.braintrustdata_experiments.test", "experiments.0.name", "filtered-experiment-1"),
 					resource.TestCheckResourceAttrSet("data.braintrustdata_experiments.test", "ids.#"),
 				),
 			},
