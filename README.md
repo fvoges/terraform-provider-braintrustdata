@@ -160,6 +160,10 @@ This provider is built using strict TDD methodology:
 
 All new features must follow this process. See [superpowers/test-driven-development](https://github.com/anthropics/claude-code) for details.
 
+### API Reference
+
+The Braintrust API is documented via OpenAPI specification at https://github.com/braintrustdata/braintrust-openapi. Consult this specification when implementing new resources or debugging API interactions.
+
 ### Code Quality
 
 ```bash

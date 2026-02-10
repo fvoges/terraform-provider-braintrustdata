@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // Role represents a Braintrust role
@@ -64,7 +65,7 @@ func (c *Client) CreateRole(ctx context.Context, req *CreateRoleRequest) (*Role,
 // GetRole retrieves a role by ID
 func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 	var role Role
-	err := c.Do(ctx, "GET", fmt.Sprintf("/v1/role/%s", id), nil, &role)
+	err := c.Do(ctx, "GET", "/v1/role/"+url.PathEscape(id), nil, &role)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 // UpdateRole updates an existing role
 func (c *Client) UpdateRole(ctx context.Context, id string, req *UpdateRoleRequest) (*Role, error) {
 	var role Role
-	err := c.Do(ctx, "PATCH", fmt.Sprintf("/v1/role/%s", id), req, &role)
+	err := c.Do(ctx, "PATCH", "/v1/role/"+url.PathEscape(id), req, &role)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (c *Client) UpdateRole(ctx context.Context, id string, req *UpdateRoleReque
 
 // DeleteRole deletes a role (soft delete)
 func (c *Client) DeleteRole(ctx context.Context, id string) error {
-	return c.Do(ctx, "DELETE", fmt.Sprintf("/v1/role/%s", id), nil, nil)
+	return c.Do(ctx, "DELETE", "/v1/role/"+url.PathEscape(id), nil, nil)
 }
 
 // ListRoles lists all roles
@@ -92,30 +93,30 @@ func (c *Client) ListRoles(ctx context.Context, opts *ListRolesOptions) (*ListRo
 
 	// Build query parameters
 	if opts != nil {
-		separator := "?"
+		params := url.Values{}
 
 		if opts.OrgName != "" {
-			path += separator + "org_name=" + opts.OrgName
-			separator = "&"
+			params.Set("org_name", opts.OrgName)
 		}
 
 		if opts.Limit > 0 {
-			path += fmt.Sprintf("%slimit=%d", separator, opts.Limit)
-			separator = "&"
+			params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 		}
 
 		if opts.StartingAfter != "" {
-			path += separator + "starting_after=" + opts.StartingAfter
-			separator = "&"
+			params.Set("starting_after", opts.StartingAfter)
 		}
 
 		if opts.EndingBefore != "" {
-			path += separator + "ending_before=" + opts.EndingBefore
-			separator = "&"
+			params.Set("ending_before", opts.EndingBefore)
 		}
 
 		if opts.RoleName != "" {
-			path += separator + "role_name=" + opts.RoleName
+			params.Set("role_name", opts.RoleName)
+		}
+
+		if encodedParams := params.Encode(); encodedParams != "" {
+			path += "?" + encodedParams
 		}
 	}
 
