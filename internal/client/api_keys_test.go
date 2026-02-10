@@ -320,7 +320,7 @@ func TestListAPIKeys(t *testing.T) {
 			},
 			responseStatus: http.StatusOK,
 			wantErr:        false,
-			expectedPath:   "/v1/api_key?org_name=test-org&limit=10&starting_after=apikey-123",
+			expectedPath:   "/v1/api_key?limit=10&org_name=test-org&starting_after=apikey-123",
 		},
 	}
 

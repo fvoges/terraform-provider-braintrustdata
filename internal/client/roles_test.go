@@ -313,7 +313,7 @@ func TestListRoles(t *testing.T) {
 			},
 			responseStatus: http.StatusOK,
 			wantErr:        false,
-			expectedPath:   "/v1/role?org_name=test-org&limit=10&starting_after=role-123",
+			expectedPath:   "/v1/role?limit=10&org_name=test-org&starting_after=role-123",
 		},
 	}
 

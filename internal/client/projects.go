@@ -88,30 +88,30 @@ func (c *Client) ListProjects(ctx context.Context, opts *ListProjectsOptions) (*
 
 	// Build query parameters
 	if opts != nil {
-		separator := "?"
+		params := url.Values{}
 
 		if opts.OrgName != "" {
-			path += separator + "org_name=" + opts.OrgName
-			separator = "&"
+			params.Set("org_name", opts.OrgName)
 		}
 
 		if opts.Limit > 0 {
-			path += fmt.Sprintf("%slimit=%d", separator, opts.Limit)
-			separator = "&"
+			params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 		}
 
 		if opts.StartingAfter != "" {
-			path += separator + "starting_after=" + opts.StartingAfter
-			separator = "&"
+			params.Set("starting_after", opts.StartingAfter)
 		}
 
 		if opts.EndingBefore != "" {
-			path += separator + "ending_before=" + opts.EndingBefore
-			separator = "&"
+			params.Set("ending_before", opts.EndingBefore)
 		}
 
 		if opts.ProjectName != "" {
-			path += separator + "project_name=" + opts.ProjectName
+			params.Set("project_name", opts.ProjectName)
+		}
+
+		if encodedParams := params.Encode(); encodedParams != "" {
+			path += "?" + encodedParams
 		}
 	}
 
