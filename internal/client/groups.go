@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // Group represents a Braintrust group
@@ -60,7 +61,7 @@ func (c *Client) CreateGroup(ctx context.Context, req *CreateGroupRequest) (*Gro
 // GetGroup retrieves a group by ID
 func (c *Client) GetGroup(ctx context.Context, id string) (*Group, error) {
 	var group Group
-	err := c.Do(ctx, "GET", fmt.Sprintf("/v1/group/%s", id), nil, &group)
+	err := c.Do(ctx, "GET", "/v1/group/"+url.PathEscape(id), nil, &group)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (c *Client) GetGroup(ctx context.Context, id string) (*Group, error) {
 // UpdateGroup updates an existing group
 func (c *Client) UpdateGroup(ctx context.Context, id string, req *UpdateGroupRequest) (*Group, error) {
 	var group Group
-	err := c.Do(ctx, "PATCH", fmt.Sprintf("/v1/group/%s", id), req, &group)
+	err := c.Do(ctx, "PATCH", "/v1/group/"+url.PathEscape(id), req, &group)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func (c *Client) UpdateGroup(ctx context.Context, id string, req *UpdateGroupReq
 
 // DeleteGroup deletes a group
 func (c *Client) DeleteGroup(ctx context.Context, id string) error {
-	return c.Do(ctx, "DELETE", fmt.Sprintf("/v1/group/%s", id), nil, nil)
+	return c.Do(ctx, "DELETE", "/v1/group/"+url.PathEscape(id), nil, nil)
 }
 
 // ListGroups lists all groups for an organization

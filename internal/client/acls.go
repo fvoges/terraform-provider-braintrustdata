@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // ACLObjectType represents the type of object an ACL applies to
@@ -90,7 +91,7 @@ func (c *Client) CreateACL(ctx context.Context, req *CreateACLRequest) (*ACL, er
 // GetACL retrieves an ACL by ID
 func (c *Client) GetACL(ctx context.Context, id string) (*ACL, error) {
 	var acl ACL
-	err := c.Do(ctx, "GET", fmt.Sprintf("/v1/acl/%s", id), nil, &acl)
+	err := c.Do(ctx, "GET", "/v1/acl/"+url.PathEscape(id), nil, &acl)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (c *Client) GetACL(ctx context.Context, id string) (*ACL, error) {
 
 // DeleteACL deletes an ACL
 func (c *Client) DeleteACL(ctx context.Context, id string) error {
-	return c.Do(ctx, "DELETE", fmt.Sprintf("/v1/acl/%s", id), nil, nil)
+	return c.Do(ctx, "DELETE", "/v1/acl/"+url.PathEscape(id), nil, nil)
 }
 
 // ListACLs lists all ACLs for a given object
@@ -108,31 +109,31 @@ func (c *Client) ListACLs(ctx context.Context, opts *ListACLsOptions) (*ListACLs
 
 	// Build query parameters
 	if opts != nil {
-		separator := "?"
+		params := url.Values{}
 
 		// object_id and object_type are required
 		if opts.ObjectID != "" {
-			path += separator + "object_id=" + opts.ObjectID
-			separator = "&"
+			params.Set("object_id", opts.ObjectID)
 		}
 
 		if opts.ObjectType != "" {
-			path += separator + "object_type=" + string(opts.ObjectType)
-			separator = "&"
+			params.Set("object_type", string(opts.ObjectType))
 		}
 
 		if opts.Limit > 0 {
-			path += fmt.Sprintf("%slimit=%d", separator, opts.Limit)
-			separator = "&"
+			params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 		}
 
 		if opts.StartingAfter != "" {
-			path += separator + "starting_after=" + opts.StartingAfter
-			separator = "&"
+			params.Set("starting_after", opts.StartingAfter)
 		}
 
 		if opts.EndingBefore != "" {
-			path += separator + "ending_before=" + opts.EndingBefore
+			params.Set("ending_before", opts.EndingBefore)
+		}
+
+		if encodedParams := params.Encode(); encodedParams != "" {
+			path += "?" + encodedParams
 		}
 	}
 
