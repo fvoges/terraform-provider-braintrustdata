@@ -313,7 +313,7 @@ func TestListProjects(t *testing.T) {
 			},
 			responseStatus: http.StatusOK,
 			wantErr:        false,
-			expectedPath:   "/v1/project?org_name=test-org&limit=10&starting_after=proj-123",
+			expectedPath:   "/v1/project?limit=10&org_name=test-org&starting_after=proj-123",
 		},
 	}
 
