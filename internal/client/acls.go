@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // ACLObjectType represents the type of object an ACL applies to
@@ -90,7 +91,7 @@ func (c *Client) CreateACL(ctx context.Context, req *CreateACLRequest) (*ACL, er
 // GetACL retrieves an ACL by ID
 func (c *Client) GetACL(ctx context.Context, id string) (*ACL, error) {
 	var acl ACL
-	err := c.Do(ctx, "GET", fmt.Sprintf("/v1/acl/%s", id), nil, &acl)
+	err := c.Do(ctx, "GET", "/v1/acl/"+url.PathEscape(id), nil, &acl)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (c *Client) GetACL(ctx context.Context, id string) (*ACL, error) {
 
 // DeleteACL deletes an ACL
 func (c *Client) DeleteACL(ctx context.Context, id string) error {
-	return c.Do(ctx, "DELETE", fmt.Sprintf("/v1/acl/%s", id), nil, nil)
+	return c.Do(ctx, "DELETE", "/v1/acl/"+url.PathEscape(id), nil, nil)
 }
 
 // ListACLs lists all ACLs for a given object

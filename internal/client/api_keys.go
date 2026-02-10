@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // APIKey represents a Braintrust API key
@@ -55,7 +56,7 @@ func (c *Client) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*A
 // GetAPIKey retrieves an API key by ID
 func (c *Client) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
 	var apiKey APIKey
-	err := c.Do(ctx, "GET", fmt.Sprintf("/v1/api_key/%s", id), nil, &apiKey)
+	err := c.Do(ctx, "GET", "/v1/api_key/"+url.PathEscape(id), nil, &apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (c *Client) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
 // UpdateAPIKey updates an existing API key
 func (c *Client) UpdateAPIKey(ctx context.Context, id string, req *UpdateAPIKeyRequest) (*APIKey, error) {
 	var apiKey APIKey
-	err := c.Do(ctx, "PATCH", fmt.Sprintf("/v1/api_key/%s", id), req, &apiKey)
+	err := c.Do(ctx, "PATCH", "/v1/api_key/"+url.PathEscape(id), req, &apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func (c *Client) UpdateAPIKey(ctx context.Context, id string, req *UpdateAPIKeyR
 
 // DeleteAPIKey deletes an API key
 func (c *Client) DeleteAPIKey(ctx context.Context, id string) error {
-	return c.Do(ctx, "DELETE", fmt.Sprintf("/v1/api_key/%s", id), nil, nil)
+	return c.Do(ctx, "DELETE", "/v1/api_key/"+url.PathEscape(id), nil, nil)
 }
 
 // ListAPIKeys lists all API keys
