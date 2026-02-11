@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -703,5 +704,50 @@ func TestListAPIKeys_SpecialCharacters(t *testing.T) {
 				t.Errorf("expected %d api keys, got %d", len(tt.response.APIKeys), len(result.APIKeys))
 			}
 		})
+	}
+}
+
+// TestGetAPIKey_EmptyID verifies empty ID validation
+func TestGetAPIKey_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.GetAPIKey(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyAPIKeyID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyAPIKeyID, err)
+	}
+}
+
+// TestUpdateAPIKey_EmptyID verifies empty ID validation
+func TestUpdateAPIKey_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.UpdateAPIKey(context.Background(), "", &UpdateAPIKeyRequest{Name: "test"})
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyAPIKeyID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyAPIKeyID, err)
+	}
+}
+
+// TestDeleteAPIKey_EmptyID verifies empty ID validation
+func TestDeleteAPIKey_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	err := client.DeleteAPIKey(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyAPIKeyID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyAPIKeyID, err)
 	}
 }

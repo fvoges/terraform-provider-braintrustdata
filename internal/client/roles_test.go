@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -696,5 +697,50 @@ func TestListRoles_SpecialCharacters(t *testing.T) {
 				t.Errorf("expected %d roles, got %d", len(tt.response.Roles), len(result.Roles))
 			}
 		})
+	}
+}
+
+// TestGetRole_EmptyID verifies empty ID validation
+func TestGetRole_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.GetRole(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyRoleID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyRoleID, err)
+	}
+}
+
+// TestUpdateRole_EmptyID verifies empty ID validation
+func TestUpdateRole_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.UpdateRole(context.Background(), "", &UpdateRoleRequest{Name: "test"})
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyRoleID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyRoleID, err)
+	}
+}
+
+// TestDeleteRole_EmptyID verifies empty ID validation
+func TestDeleteRole_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	err := client.DeleteRole(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyRoleID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyRoleID, err)
 	}
 }

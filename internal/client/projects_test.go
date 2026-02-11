@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -714,5 +715,49 @@ func TestListProjects_SpecialCharacters(t *testing.T) {
 				t.Errorf("expected %d projects, got %d", len(tt.response.Projects), len(result.Projects))
 			}
 		})
+	}
+}
+// TestGetProject_EmptyID verifies empty ID validation
+func TestGetProject_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.GetProject(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyProjectID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyProjectID, err)
+	}
+}
+
+// TestUpdateProject_EmptyID verifies empty ID validation
+func TestUpdateProject_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.UpdateProject(context.Background(), "", &UpdateProjectRequest{Name: "test"})
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyProjectID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyProjectID, err)
+	}
+}
+
+// TestDeleteProject_EmptyID verifies empty ID validation
+func TestDeleteProject_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	err := client.DeleteProject(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyProjectID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyProjectID, err)
 	}
 }

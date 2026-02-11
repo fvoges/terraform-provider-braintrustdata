@@ -2,9 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 )
+
+// ErrEmptyGroupID is returned when a group ID is empty.
+var ErrEmptyGroupID = errors.New("group ID cannot be empty")
 
 // Group represents a Braintrust group
 type Group struct {
@@ -60,6 +64,9 @@ func (c *Client) CreateGroup(ctx context.Context, req *CreateGroupRequest) (*Gro
 
 // GetGroup retrieves a group by ID
 func (c *Client) GetGroup(ctx context.Context, id string) (*Group, error) {
+	if id == "" {
+		return nil, ErrEmptyGroupID
+	}
 	var group Group
 	err := c.Do(ctx, "GET", "/v1/group/"+url.PathEscape(id), nil, &group)
 	if err != nil {
@@ -70,6 +77,9 @@ func (c *Client) GetGroup(ctx context.Context, id string) (*Group, error) {
 
 // UpdateGroup updates an existing group
 func (c *Client) UpdateGroup(ctx context.Context, id string, req *UpdateGroupRequest) (*Group, error) {
+	if id == "" {
+		return nil, ErrEmptyGroupID
+	}
 	var group Group
 	err := c.Do(ctx, "PATCH", "/v1/group/"+url.PathEscape(id), req, &group)
 	if err != nil {
@@ -80,6 +90,9 @@ func (c *Client) UpdateGroup(ctx context.Context, id string, req *UpdateGroupReq
 
 // DeleteGroup deletes a group
 func (c *Client) DeleteGroup(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrEmptyGroupID
+	}
 	return c.Do(ctx, "DELETE", "/v1/group/"+url.PathEscape(id), nil, nil)
 }
 
