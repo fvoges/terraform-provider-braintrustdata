@@ -21,7 +21,6 @@ linters:
       enable-all: true
       disable:
         - shadow
-        - fieldalignment
 
 run:
   timeout: 5m

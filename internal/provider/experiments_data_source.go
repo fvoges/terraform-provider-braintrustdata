@@ -33,14 +33,14 @@ type ExperimentsDataSourceModel struct {
 
 // ExperimentsDataSourceExperiment represents a single experiment in the list.
 type ExperimentsDataSourceExperiment struct {
+	Tags        types.Set    `tfsdk:"tags"`
+	Metadata    types.Map    `tfsdk:"metadata"`
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	ProjectID   types.String `tfsdk:"project_id"`
 	Description types.String `tfsdk:"description"`
 	Created     types.String `tfsdk:"created"`
 	Public      types.Bool   `tfsdk:"public"`
-	Metadata    types.Map    `tfsdk:"metadata"`
-	Tags        types.Set    `tfsdk:"tags"`
 }
 
 // Metadata implements datasource.DataSource.
