@@ -491,3 +491,33 @@ func TestListACLs_SpecialCharacters(t *testing.T) {
 		})
 	}
 }
+
+// TestGetACL_EmptyID verifies empty ID validation
+func TestGetACL_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.GetACL(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyACLID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyACLID, err)
+	}
+}
+
+// TestDeleteACL_EmptyID verifies empty ID validation
+func TestDeleteACL_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	err := client.DeleteACL(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyACLID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyACLID, err)
+	}
+}

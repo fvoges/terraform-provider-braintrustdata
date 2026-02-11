@@ -519,3 +519,48 @@ func TestDeleteGroup_SpecialCharacters(t *testing.T) {
 		})
 	}
 }
+
+// TestGetGroup_EmptyID verifies empty ID validation
+func TestGetGroup_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.GetGroup(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyGroupID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyGroupID, err)
+	}
+}
+
+// TestUpdateGroup_EmptyID verifies empty ID validation
+func TestUpdateGroup_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	_, err := client.UpdateGroup(context.Background(), "", &UpdateGroupRequest{Name: "test"})
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyGroupID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyGroupID, err)
+	}
+}
+
+// TestDeleteGroup_EmptyID verifies empty ID validation
+func TestDeleteGroup_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.example.com", "org-test")
+
+	err := client.DeleteGroup(context.Background(), "")
+
+	if err == nil {
+		t.Fatal("expected error for empty ID, got nil")
+	}
+
+	if !errors.Is(err, ErrEmptyGroupID) {
+		t.Errorf("expected error '%v', got '%v'", ErrEmptyGroupID, err)
+	}
+}

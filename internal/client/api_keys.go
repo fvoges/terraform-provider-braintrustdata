@@ -2,9 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 )
+
+// ErrEmptyAPIKeyID is returned when an API key ID is empty.
+var ErrEmptyAPIKeyID = errors.New("API key ID cannot be empty")
 
 // APIKey represents a Braintrust API key
 type APIKey struct {
@@ -55,6 +59,9 @@ func (c *Client) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*A
 
 // GetAPIKey retrieves an API key by ID
 func (c *Client) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
+	if id == "" {
+		return nil, ErrEmptyAPIKeyID
+	}
 	var apiKey APIKey
 	err := c.Do(ctx, "GET", "/v1/api_key/"+url.PathEscape(id), nil, &apiKey)
 	if err != nil {
@@ -65,6 +72,9 @@ func (c *Client) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
 
 // UpdateAPIKey updates an existing API key
 func (c *Client) UpdateAPIKey(ctx context.Context, id string, req *UpdateAPIKeyRequest) (*APIKey, error) {
+	if id == "" {
+		return nil, ErrEmptyAPIKeyID
+	}
 	var apiKey APIKey
 	err := c.Do(ctx, "PATCH", "/v1/api_key/"+url.PathEscape(id), req, &apiKey)
 	if err != nil {
@@ -75,6 +85,9 @@ func (c *Client) UpdateAPIKey(ctx context.Context, id string, req *UpdateAPIKeyR
 
 // DeleteAPIKey deletes an API key
 func (c *Client) DeleteAPIKey(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrEmptyAPIKeyID
+	}
 	return c.Do(ctx, "DELETE", "/v1/api_key/"+url.PathEscape(id), nil, nil)
 }
 

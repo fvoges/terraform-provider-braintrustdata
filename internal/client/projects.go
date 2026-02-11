@@ -2,9 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 )
+
+// ErrEmptyProjectID is returned when a project ID is empty.
+var ErrEmptyProjectID = errors.New("project ID cannot be empty")
 
 // Project represents a Braintrust project
 type Project struct {
@@ -59,6 +63,9 @@ func (c *Client) CreateProject(ctx context.Context, req *CreateProjectRequest) (
 
 // GetProject retrieves a project by ID
 func (c *Client) GetProject(ctx context.Context, id string) (*Project, error) {
+	if id == "" {
+		return nil, ErrEmptyProjectID
+	}
 	var project Project
 	err := c.Do(ctx, "GET", "/v1/project/"+url.PathEscape(id), nil, &project)
 	if err != nil {
@@ -69,6 +76,9 @@ func (c *Client) GetProject(ctx context.Context, id string) (*Project, error) {
 
 // UpdateProject updates an existing project
 func (c *Client) UpdateProject(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error) {
+	if id == "" {
+		return nil, ErrEmptyProjectID
+	}
 	var project Project
 	err := c.Do(ctx, "PATCH", "/v1/project/"+url.PathEscape(id), req, &project)
 	if err != nil {
@@ -79,6 +89,9 @@ func (c *Client) UpdateProject(ctx context.Context, id string, req *UpdateProjec
 
 // DeleteProject deletes a project (soft delete)
 func (c *Client) DeleteProject(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrEmptyProjectID
+	}
 	return c.Do(ctx, "DELETE", "/v1/project/"+url.PathEscape(id), nil, nil)
 }
 

@@ -2,9 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 )
+
+// ErrEmptyRoleID is returned when a role ID is empty.
+var ErrEmptyRoleID = errors.New("role ID cannot be empty")
 
 // Role represents a Braintrust role
 type Role struct {
@@ -64,6 +68,9 @@ func (c *Client) CreateRole(ctx context.Context, req *CreateRoleRequest) (*Role,
 
 // GetRole retrieves a role by ID
 func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
+	if id == "" {
+		return nil, ErrEmptyRoleID
+	}
 	var role Role
 	err := c.Do(ctx, "GET", "/v1/role/"+url.PathEscape(id), nil, &role)
 	if err != nil {
@@ -74,6 +81,9 @@ func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 
 // UpdateRole updates an existing role
 func (c *Client) UpdateRole(ctx context.Context, id string, req *UpdateRoleRequest) (*Role, error) {
+	if id == "" {
+		return nil, ErrEmptyRoleID
+	}
 	var role Role
 	err := c.Do(ctx, "PATCH", "/v1/role/"+url.PathEscape(id), req, &role)
 	if err != nil {
@@ -84,6 +94,9 @@ func (c *Client) UpdateRole(ctx context.Context, id string, req *UpdateRoleReque
 
 // DeleteRole deletes a role (soft delete)
 func (c *Client) DeleteRole(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrEmptyRoleID
+	}
 	return c.Do(ctx, "DELETE", "/v1/role/"+url.PathEscape(id), nil, nil)
 }
 

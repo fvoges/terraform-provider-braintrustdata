@@ -2,9 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 )
+
+// ErrEmptyACLID is returned when an ACL ID is empty.
+var ErrEmptyACLID = errors.New("ACL ID cannot be empty")
 
 // ACLObjectType represents the type of object an ACL applies to
 type ACLObjectType string
@@ -90,6 +94,9 @@ func (c *Client) CreateACL(ctx context.Context, req *CreateACLRequest) (*ACL, er
 
 // GetACL retrieves an ACL by ID
 func (c *Client) GetACL(ctx context.Context, id string) (*ACL, error) {
+	if id == "" {
+		return nil, ErrEmptyACLID
+	}
 	var acl ACL
 	err := c.Do(ctx, "GET", "/v1/acl/"+url.PathEscape(id), nil, &acl)
 	if err != nil {
@@ -100,6 +107,9 @@ func (c *Client) GetACL(ctx context.Context, id string) (*ACL, error) {
 
 // DeleteACL deletes an ACL
 func (c *Client) DeleteACL(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrEmptyACLID
+	}
 	return c.Do(ctx, "DELETE", "/v1/acl/"+url.PathEscape(id), nil, nil)
 }
 
