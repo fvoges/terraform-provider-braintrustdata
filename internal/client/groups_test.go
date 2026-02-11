@@ -277,3 +277,245 @@ func TestListGroups(t *testing.T) {
 		t.Errorf("expected first group name 'Group 1', got %s", result.Groups[0].Name)
 	}
 }
+
+func TestGetGroup_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name         string
+		groupID      string
+		expectedPath string
+		response     Group
+	}{
+		{
+			name:         "handles ID with slash",
+			groupID:      "group/123",
+			expectedPath: "/v1/group/group/123",
+			response: Group{
+				ID:   "group/123",
+				Name: "Test Group",
+			},
+		},
+		{
+			name:         "handles ID with space",
+			groupID:      "group 456",
+			expectedPath: "/v1/group/group 456",
+			response: Group{
+				ID:   "group 456",
+				Name: "Test Group",
+			},
+		},
+		{
+			name:         "handles ID with plus sign",
+			groupID:      "group+test",
+			expectedPath: "/v1/group/group+test",
+			response: Group{
+				ID:   "group+test",
+				Name: "Test Group",
+			},
+		},
+		{
+			name:         "handles ID with Unicode",
+			groupID:      "グループ",
+			expectedPath: "/v1/group/グループ",
+			response: Group{
+				ID:   "グループ",
+				Name: "Test Group",
+			},
+		},
+		{
+			name:         "handles ID with ampersand",
+			groupID:      "group&test",
+			expectedPath: "/v1/group/group&test",
+			response: Group{
+				ID:   "group&test",
+				Name: "Test Group",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+				if r.Method != "GET" {
+					t.Errorf("expected GET method, got %s", r.Method)
+				}
+
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(tt.response)
+			}))
+			defer server.Close()
+
+			client := NewClient("sk-test", server.URL, "org-test")
+			client.httpClient = server.Client()
+			group, err := client.GetGroup(context.Background(), tt.groupID)
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if group.ID != tt.response.ID {
+				t.Errorf("expected ID %s, got %s", tt.response.ID, group.ID)
+			}
+		})
+	}
+}
+
+func TestUpdateGroup_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name         string
+		groupID      string
+		expectedPath string
+		request      *UpdateGroupRequest
+		response     Group
+	}{
+		{
+			name:         "handles ID with slash",
+			groupID:      "group/123",
+			expectedPath: "/v1/group/group/123",
+			request: &UpdateGroupRequest{
+				Name: "Updated Group",
+			},
+			response: Group{
+				ID:   "group/123",
+				Name: "Updated Group",
+			},
+		},
+		{
+			name:         "handles ID with space",
+			groupID:      "group 456",
+			expectedPath: "/v1/group/group 456",
+			request: &UpdateGroupRequest{
+				Name: "Updated Group",
+			},
+			response: Group{
+				ID:   "group 456",
+				Name: "Updated Group",
+			},
+		},
+		{
+			name:         "handles ID with plus sign",
+			groupID:      "group+test",
+			expectedPath: "/v1/group/group+test",
+			request: &UpdateGroupRequest{
+				Name: "Updated Group",
+			},
+			response: Group{
+				ID:   "group+test",
+				Name: "Updated Group",
+			},
+		},
+		{
+			name:         "handles ID with Unicode",
+			groupID:      "グループ",
+			expectedPath: "/v1/group/グループ",
+			request: &UpdateGroupRequest{
+				Name: "Updated Group",
+			},
+			response: Group{
+				ID:   "グループ",
+				Name: "Updated Group",
+			},
+		},
+		{
+			name:         "handles ID with ampersand",
+			groupID:      "group&test",
+			expectedPath: "/v1/group/group&test",
+			request: &UpdateGroupRequest{
+				Name: "Updated Group",
+			},
+			response: Group{
+				ID:   "group&test",
+				Name: "Updated Group",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+				if r.Method != "PATCH" {
+					t.Errorf("expected PATCH method, got %s", r.Method)
+				}
+
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(tt.response)
+			}))
+			defer server.Close()
+
+			client := NewClient("sk-test", server.URL, "org-test")
+			client.httpClient = server.Client()
+			group, err := client.UpdateGroup(context.Background(), tt.groupID, tt.request)
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if group.ID != tt.response.ID {
+				t.Errorf("expected ID %s, got %s", tt.response.ID, group.ID)
+			}
+		})
+	}
+}
+
+func TestDeleteGroup_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name         string
+		groupID      string
+		expectedPath string
+	}{
+		{
+			name:         "handles ID with slash",
+			groupID:      "group/123",
+			expectedPath: "/v1/group/group/123",
+		},
+		{
+			name:         "handles ID with space",
+			groupID:      "group 456",
+			expectedPath: "/v1/group/group 456",
+		},
+		{
+			name:         "handles ID with plus sign",
+			groupID:      "group+test",
+			expectedPath: "/v1/group/group+test",
+		},
+		{
+			name:         "handles ID with Unicode",
+			groupID:      "グループ",
+			expectedPath: "/v1/group/グループ",
+		},
+		{
+			name:         "handles ID with ampersand",
+			groupID:      "group&test",
+			expectedPath: "/v1/group/group&test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+				if r.Method != "DELETE" {
+					t.Errorf("expected DELETE method, got %s", r.Method)
+				}
+
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			client := NewClient("sk-test", server.URL, "org-test")
+			client.httpClient = server.Client()
+			err := client.DeleteGroup(context.Background(), tt.groupID)
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
