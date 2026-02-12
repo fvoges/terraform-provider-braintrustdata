@@ -466,3 +466,266 @@ func TestListDatasets_WithOptions(t *testing.T) {
 		})
 	}
 }
+
+// TestGetDataset_SpecialCharacters verifies URL path escaping for IDs with special characters
+func TestGetDataset_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name           string
+		datasetID      string
+		expectedPath   string
+		response       Dataset
+		responseStatus int
+	}{
+		{
+			name:         "handles ID with space",
+			datasetID:    "dataset 123",
+			expectedPath: "/v1/dataset/dataset 123",
+			response: Dataset{
+				ID:   "dataset 123",
+				Name: "Test Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with slash",
+			datasetID:    "dataset/123",
+			expectedPath: "/v1/dataset/dataset/123",
+			response: Dataset{
+				ID:   "dataset/123",
+				Name: "Test Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with question mark",
+			datasetID:    "dataset?123",
+			expectedPath: "/v1/dataset/dataset?123",
+			response: Dataset{
+				ID:   "dataset?123",
+				Name: "Test Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with hash",
+			datasetID:    "dataset#123",
+			expectedPath: "/v1/dataset/dataset#123",
+			response: Dataset{
+				ID:   "dataset#123",
+				Name: "Test Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with percent",
+			datasetID:    "dataset%123",
+			expectedPath: "/v1/dataset/dataset%123",
+			response: Dataset{
+				ID:   "dataset%123",
+				Name: "Test Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+				if r.Method != "GET" {
+					t.Errorf("expected GET method, got %s", r.Method)
+				}
+
+				w.WriteHeader(tt.responseStatus)
+				_ = json.NewEncoder(w).Encode(tt.response)
+			}))
+			defer server.Close()
+
+			client := NewClient("test-key", server.URL, "test-org")
+			client.httpClient = server.Client()
+			dataset, err := client.GetDataset(context.Background(), tt.datasetID)
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if dataset.ID != tt.response.ID {
+				t.Errorf("expected ID %s, got %s", tt.response.ID, dataset.ID)
+			}
+		})
+	}
+}
+
+// TestUpdateDataset_SpecialCharacters verifies URL path escaping for IDs with special characters
+func TestUpdateDataset_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name           string
+		datasetID      string
+		expectedPath   string
+		request        *UpdateDatasetRequest
+		response       Dataset
+		responseStatus int
+	}{
+		{
+			name:         "handles ID with space",
+			datasetID:    "dataset 123",
+			expectedPath: "/v1/dataset/dataset 123",
+			request: &UpdateDatasetRequest{
+				Name: "Updated Dataset",
+			},
+			response: Dataset{
+				ID:   "dataset 123",
+				Name: "Updated Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with slash",
+			datasetID:    "dataset/123",
+			expectedPath: "/v1/dataset/dataset/123",
+			request: &UpdateDatasetRequest{
+				Name: "Updated Dataset",
+			},
+			response: Dataset{
+				ID:   "dataset/123",
+				Name: "Updated Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with question mark",
+			datasetID:    "dataset?123",
+			expectedPath: "/v1/dataset/dataset?123",
+			request: &UpdateDatasetRequest{
+				Name: "Updated Dataset",
+			},
+			response: Dataset{
+				ID:   "dataset?123",
+				Name: "Updated Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with hash",
+			datasetID:    "dataset#123",
+			expectedPath: "/v1/dataset/dataset#123",
+			request: &UpdateDatasetRequest{
+				Name: "Updated Dataset",
+			},
+			response: Dataset{
+				ID:   "dataset#123",
+				Name: "Updated Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:         "handles ID with percent",
+			datasetID:    "dataset%123",
+			expectedPath: "/v1/dataset/dataset%123",
+			request: &UpdateDatasetRequest{
+				Name: "Updated Dataset",
+			},
+			response: Dataset{
+				ID:   "dataset%123",
+				Name: "Updated Dataset",
+			},
+			responseStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+				if r.Method != "PATCH" {
+					t.Errorf("expected PATCH method, got %s", r.Method)
+				}
+
+				w.WriteHeader(tt.responseStatus)
+				_ = json.NewEncoder(w).Encode(tt.response)
+			}))
+			defer server.Close()
+
+			client := NewClient("test-key", server.URL, "test-org")
+			client.httpClient = server.Client()
+			dataset, err := client.UpdateDataset(context.Background(), tt.datasetID, tt.request)
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if dataset.ID != tt.response.ID {
+				t.Errorf("expected ID %s, got %s", tt.response.ID, dataset.ID)
+			}
+		})
+	}
+}
+
+// TestDeleteDataset_SpecialCharacters verifies URL path escaping for IDs with special characters
+func TestDeleteDataset_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name           string
+		datasetID      string
+		expectedPath   string
+		responseStatus int
+	}{
+		{
+			name:           "handles ID with space",
+			datasetID:      "dataset 123",
+			expectedPath:   "/v1/dataset/dataset 123",
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:           "handles ID with slash",
+			datasetID:      "dataset/123",
+			expectedPath:   "/v1/dataset/dataset/123",
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:           "handles ID with question mark",
+			datasetID:      "dataset?123",
+			expectedPath:   "/v1/dataset/dataset?123",
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:           "handles ID with hash",
+			datasetID:      "dataset#123",
+			expectedPath:   "/v1/dataset/dataset#123",
+			responseStatus: http.StatusOK,
+		},
+		{
+			name:           "handles ID with percent",
+			datasetID:      "dataset%123",
+			expectedPath:   "/v1/dataset/dataset%123",
+			responseStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+				if r.Method != "DELETE" {
+					t.Errorf("expected DELETE method, got %s", r.Method)
+				}
+
+				w.WriteHeader(tt.responseStatus)
+			}))
+			defer server.Close()
+
+			client := NewClient("test-key", server.URL, "test-org")
+			client.httpClient = server.Client()
+			err := client.DeleteDataset(context.Background(), tt.datasetID)
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
