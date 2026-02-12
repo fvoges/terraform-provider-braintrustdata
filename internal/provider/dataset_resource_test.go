@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 func TestAccDatasetResource(t *testing.T) {
@@ -125,6 +126,11 @@ func TestAccDatasetResource_ProjectIDChange(t *testing.T) {
 			},
 			{
 				Config: testAccDatasetResourceConfigForProject("test-dataset", "project2"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("braintrustdata_dataset.test", plancheck.ResourceActionReplace),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "name", "test-dataset"),
 					resource.TestCheckResourceAttrPair("braintrustdata_dataset.test", "project_id", "braintrustdata_project.test2", "id"),

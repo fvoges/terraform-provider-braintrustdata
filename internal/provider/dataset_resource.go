@@ -147,7 +147,7 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Convert metadata from Terraform Map to Go map
 	var metadata map[string]interface{}
-	if !data.Metadata.IsNull() {
+	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
 		metadata = make(map[string]interface{})
 		metadataMap := make(map[string]string)
 		resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadataMap, false)...)
@@ -161,7 +161,7 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Convert tags from Terraform Set to Go slice
 	var tags []string
-	if !data.Tags.IsNull() {
+	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
 		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -170,7 +170,7 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Get public value
 	var publicPtr *bool
-	if !data.Public.IsNull() {
+	if !data.Public.IsNull() && !data.Public.IsUnknown() {
 		publicVal := data.Public.ValueBool()
 		publicPtr = &publicVal
 	}
@@ -364,14 +364,18 @@ func (r *DatasetResource) Update(ctx context.Context, req resource.UpdateRequest
 			metadata[k] = v
 		}
 	} else if data.Metadata.IsNull() {
-		// Explicitly clear metadata by sending empty map
+		// Explicitly clear metadata by sending empty map.
+		// The omitempty JSON tag only omits nil values, not empty maps.
 		metadata = make(map[string]interface{})
 	}
 	// If IsUnknown, metadata remains nil and field is omitted from request
 
 	// Convert tags from Terraform Set to Go slice
+	// NOTE: Tags cannot be explicitly cleared due to omitempty JSON tag.
+	// Removing tags from config will leave existing tags unchanged.
+	// This matches the behavior of experiments_resource.go.
 	var tags []string
-	if !data.Tags.IsNull() {
+	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
 		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
 		if resp.Diagnostics.HasError() {
 			return
