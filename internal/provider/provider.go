@@ -134,6 +134,7 @@ func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewACLResource,
 		NewAPIKeyResource,
+		NewDatasetResource,
 		NewExperimentResource,
 		NewGroupResource,
 		NewProjectResource,
