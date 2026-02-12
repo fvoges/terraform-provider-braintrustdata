@@ -145,6 +145,8 @@ func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Reso
 // DataSources defines the data sources implemented in the provider.
 func (p *BraintrustProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewDatasetDataSource,
+		NewDatasetsDataSource,
 		NewExperimentDataSource,
 		NewExperimentsDataSource,
 		NewGroupDataSource,
