@@ -157,11 +157,11 @@ Acceptance tests normally only run on main branch pushes. To run them on a PR:
 1. Go to Actions tab in GitHub
 2. Select "Tests" workflow
 3. Click "Run workflow"
-4. Select the PR branch
+4. Select the PR branch (only branches that exist in this repository will appear; fork-based PR branches typically will not be selectable)
 5. Check "Run acceptance tests" checkbox
 6. Click "Run workflow"
 
-Note: This requires maintainer permissions and uses repository secrets.
+Note: This requires maintainer permissions, runs with repository secrets, and can only be used for PRs whose branches exist in this repository (not fork-based PRs).
 
 ### Test-Driven Development
 
