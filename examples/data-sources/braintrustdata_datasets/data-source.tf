@@ -45,17 +45,3 @@ locals {
 output "support_dataset_id" {
   value = local.support_dataset.id
 }
-
-# Count datasets by public/private status
-locals {
-  public_count  = length([for ds in data.braintrustdata_datasets.all.datasets : ds if ds.public])
-  private_count = length([for ds in data.braintrustdata_datasets.all.datasets : ds if !ds.public])
-}
-
-output "dataset_stats" {
-  value = {
-    total   = length(data.braintrustdata_datasets.all.datasets)
-    public  = local.public_count
-    private = local.private_count
-  }
-}
