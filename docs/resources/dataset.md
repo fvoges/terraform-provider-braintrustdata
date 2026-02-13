@@ -90,7 +90,6 @@ resource "braintrustdata_dataset" "complete" {
 
 - `description` (String) A description of the dataset.
 - `metadata` (Map of String) Metadata associated with the dataset as key-value pairs.
-- `public` (Boolean) Whether the dataset is publicly accessible. Defaults to false.
 - `tags` (Set of String) Tags associated with the dataset.
 
 ### Read-Only
