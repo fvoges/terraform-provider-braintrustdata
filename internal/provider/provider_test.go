@@ -95,9 +95,23 @@ func TestProviderConfigure_DefaultAPIURL(t *testing.T) {
 
 // TestProviderConfigure_ValidationRequired verifies API key is required
 func TestProviderConfigure_ValidationRequired(t *testing.T) {
+	// Save original values
+	origAPIKey := os.Getenv("BRAINTRUST_API_KEY")
+	origOrgID := os.Getenv("BRAINTRUST_ORG_ID")
+
 	// Clear environment variables to test validation
 	_ = os.Unsetenv("BRAINTRUST_API_KEY")
 	_ = os.Unsetenv("BRAINTRUST_ORG_ID")
+
+	// Restore after test
+	defer func() {
+		if origAPIKey != "" {
+			_ = os.Setenv("BRAINTRUST_API_KEY", origAPIKey)
+		}
+		if origOrgID != "" {
+			_ = os.Setenv("BRAINTRUST_ORG_ID", origOrgID)
+		}
+	}()
 
 	// Validation will be tested via acceptance tests
 	// This test documents the requirement
