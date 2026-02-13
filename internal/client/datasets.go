@@ -27,13 +27,11 @@ type Dataset struct {
 	UserID      string                 `json:"user_id,omitempty"`
 	OrgID       string                 `json:"org_id,omitempty"`
 	Tags        []string               `json:"tags,omitempty"`
-	Public      bool                   `json:"public"`
 }
 
 // CreateDatasetRequest represents a request to create a dataset
 type CreateDatasetRequest struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	Public      *bool                  `json:"public,omitempty"`
 	ProjectID   string                 `json:"project_id"`
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
@@ -44,7 +42,6 @@ type CreateDatasetRequest struct {
 type UpdateDatasetRequest struct {
 	Name        string                 `json:"name,omitempty"`
 	Description string                 `json:"description,omitempty"`
-	Public      *bool                  `json:"public,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 	Tags        []string               `json:"tags,omitempty"`
 }

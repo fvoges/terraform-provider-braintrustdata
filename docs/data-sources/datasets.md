@@ -104,6 +104,5 @@ Read-Only:
 - `name` (String) The name of the dataset.
 - `org_id` (String) The ID of the organization this dataset belongs to.
 - `project_id` (String) The project ID the dataset belongs to.
-- `public` (Boolean) Whether the dataset is publicly accessible.
 - `tags` (Set of String) Tags associated with the dataset.
 - `user_id` (String) The ID of the user who created the dataset.
