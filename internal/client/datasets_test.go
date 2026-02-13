@@ -32,18 +32,11 @@ func TestCreateDataset(t *testing.T) {
 			t.Error("expected project_id to be set")
 		}
 
-		// Handle Public pointer
-		public := false
-		if req.Public != nil {
-			public = *req.Public
-		}
-
 		resp := Dataset{
 			ID:          "dataset-123",
 			ProjectID:   req.ProjectID,
 			Name:        req.Name,
 			Description: req.Description,
-			Public:      public,
 			Metadata:    req.Metadata,
 			Tags:        req.Tags,
 			Created:     time.Now().Format(time.RFC3339),
@@ -64,12 +57,10 @@ func TestCreateDataset(t *testing.T) {
 		"size":   float64(100),
 	}
 
-	publicTrue := true
 	dataset, err := client.CreateDataset(context.Background(), &CreateDatasetRequest{
 		ProjectID:   "project-123",
 		Name:        "Test Dataset",
 		Description: "A test dataset",
-		Public:      &publicTrue,
 		Metadata:    metadata,
 		Tags:        []string{"images", "test"},
 	})
@@ -86,9 +77,6 @@ func TestCreateDataset(t *testing.T) {
 	}
 	if dataset.ProjectID != "project-123" {
 		t.Errorf("expected project_id 'project-123', got %s", dataset.ProjectID)
-	}
-	if !dataset.Public {
-		t.Error("expected public to be true")
 	}
 	if len(dataset.Tags) != 2 {
 		t.Errorf("expected 2 tags, got %d", len(dataset.Tags))
@@ -110,7 +98,6 @@ func TestGetDataset(t *testing.T) {
 			ProjectID:   "project-123",
 			Name:        "Test Dataset",
 			Description: "A test dataset",
-			Public:      true,
 			Metadata: map[string]interface{}{
 				"source": "test-suite",
 			},
@@ -190,12 +177,6 @@ func TestUpdateDataset(t *testing.T) {
 			t.Fatalf("failed to decode request: %v", err)
 		}
 
-		// Test that Public pointer works correctly
-		public := false
-		if req.Public != nil {
-			public = *req.Public
-		}
-
 		// Handle metadata
 		metadata := req.Metadata
 
@@ -204,7 +185,6 @@ func TestUpdateDataset(t *testing.T) {
 			ProjectID:   "project-123",
 			Name:        req.Name,
 			Description: req.Description,
-			Public:      public,
 			Metadata:    metadata,
 			Tags:        req.Tags,
 			Created:     time.Now().Format(time.RFC3339),
@@ -220,14 +200,12 @@ func TestUpdateDataset(t *testing.T) {
 	client := NewClient("sk-test", server.URL, "org-test")
 	client.httpClient = server.Client()
 
-	publicFalse := false
 	metadata := map[string]interface{}{
 		"updated": true,
 	}
 	dataset, err := client.UpdateDataset(context.Background(), "dataset-123", &UpdateDatasetRequest{
 		Name:        "Updated Dataset",
 		Description: "Updated description",
-		Public:      &publicFalse,
 		Metadata:    metadata,
 		Tags:        []string{"updated"},
 	})
@@ -238,9 +216,6 @@ func TestUpdateDataset(t *testing.T) {
 
 	if dataset.Name != "Updated Dataset" {
 		t.Errorf("expected name 'Updated Dataset', got %s", dataset.Name)
-	}
-	if dataset.Public {
-		t.Error("expected public to be false")
 	}
 	if len(dataset.Tags) != 1 {
 		t.Errorf("expected 1 tag, got %d", len(dataset.Tags))

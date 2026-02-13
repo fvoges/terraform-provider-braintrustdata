@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -39,7 +38,6 @@ type DatasetResourceModel struct {
 	Created     types.String `tfsdk:"created"`
 	UserID      types.String `tfsdk:"user_id"`
 	OrgID       types.String `tfsdk:"org_id"`
-	Public      types.Bool   `tfsdk:"public"`
 }
 
 // Metadata implements resource.Resource.
@@ -74,12 +72,6 @@ func (r *DatasetResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"description": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "A description of the dataset.",
-			},
-			"public": schema.BoolAttribute{
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "Whether the dataset is publicly accessible. Defaults to false.",
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -168,19 +160,11 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	// Get public value
-	var publicPtr *bool
-	if !data.Public.IsNull() && !data.Public.IsUnknown() {
-		publicVal := data.Public.ValueBool()
-		publicPtr = &publicVal
-	}
-
 	// Create dataset via API
 	dataset, err := r.client.CreateDataset(ctx, &client.CreateDatasetRequest{
 		ProjectID:   data.ProjectID.ValueString(),
 		Name:        data.Name.ValueString(),
 		Description: data.Description.ValueString(),
-		Public:      publicPtr,
 		Metadata:    metadata,
 		Tags:        tags,
 	})
@@ -213,7 +197,6 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 		data.UserID = types.StringNull()
 	}
 	data.OrgID = types.StringValue(dataset.OrgID)
-	data.Public = types.BoolValue(dataset.Public)
 
 	// Convert metadata from Go map to Terraform Map
 	if len(dataset.Metadata) > 0 {
@@ -289,7 +272,6 @@ func (r *DatasetResource) Read(ctx context.Context, req resource.ReadRequest, re
 		data.UserID = types.StringNull()
 	}
 	data.OrgID = types.StringValue(dataset.OrgID)
-	data.Public = types.BoolValue(dataset.Public)
 
 	// Convert metadata from Go map to Terraform Map
 	if len(dataset.Metadata) > 0 {
@@ -382,18 +364,10 @@ func (r *DatasetResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	// Get public value
-	var publicPtr *bool
-	if !data.Public.IsNull() {
-		publicVal := data.Public.ValueBool()
-		publicPtr = &publicVal
-	}
-
 	// Update dataset via API
 	dataset, err := r.client.UpdateDataset(ctx, data.ID.ValueString(), &client.UpdateDatasetRequest{
 		Name:        data.Name.ValueString(),
 		Description: data.Description.ValueString(),
-		Public:      publicPtr,
 		Metadata:    metadata,
 		Tags:        tags,
 	})
@@ -410,7 +384,6 @@ func (r *DatasetResource) Update(ctx context.Context, req resource.UpdateRequest
 	} else {
 		data.Description = types.StringNull()
 	}
-	data.Public = types.BoolValue(dataset.Public)
 
 	// Convert metadata from Go map to Terraform Map
 	if len(dataset.Metadata) > 0 {

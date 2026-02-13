@@ -33,7 +33,6 @@ type DatasetDataSourceModel struct {
 	Created     types.String `tfsdk:"created"`
 	UserID      types.String `tfsdk:"user_id"`
 	OrgID       types.String `tfsdk:"org_id"`
-	Public      types.Bool   `tfsdk:"public"`
 }
 
 // Metadata implements datasource.DataSource.
@@ -77,10 +76,6 @@ func (d *DatasetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"org_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the organization this dataset belongs to.",
-			},
-			"public": schema.BoolAttribute{
-				Computed:            true,
-				MarkdownDescription: "Whether the dataset is publicly accessible.",
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -216,7 +211,6 @@ func (d *DatasetDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	data.Created = types.StringValue(dataset.Created)
 	data.UserID = types.StringValue(dataset.UserID)
 	data.OrgID = types.StringValue(dataset.OrgID)
-	data.Public = types.BoolValue(dataset.Public)
 
 	if len(dataset.Metadata) > 0 {
 		metadataMap := make(map[string]string)
