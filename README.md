@@ -150,6 +150,19 @@ export BRAINTRUST_ORG_ID="org-***"
 make testacc
 ```
 
+### Running Acceptance Tests on PRs (Maintainers Only)
+
+Acceptance tests normally only run on main branch pushes. To run them on a PR:
+
+1. Go to Actions tab in GitHub
+2. Select "Tests" workflow
+3. Click "Run workflow"
+4. Select the PR branch (only branches that exist in this repository will appear; fork-based PR branches typically will not be selectable)
+5. Check "Run acceptance tests" checkbox
+6. Click "Run workflow"
+
+Note: This requires maintainer permissions, runs with repository secrets, and can only be used for PRs whose branches exist in this repository (not fork-based PRs).
+
 ### Test-Driven Development
 
 This provider is built using strict TDD methodology:
