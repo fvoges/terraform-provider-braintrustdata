@@ -53,21 +53,11 @@ resource "braintrustdata_dataset" "with_metadata" {
   tags = ["production", "training", "q1-2024"]
 }
 
-# Create a public dataset
-resource "braintrustdata_dataset" "public" {
-  name        = "open-research-dataset"
-  project_id  = "proj-abc123"
-  description = "Public dataset for research purposes"
-  public      = true
-  tags        = ["research", "public"]
-}
-
 # Create a dataset with all optional attributes
 resource "braintrustdata_dataset" "complete" {
   name        = "full-featured-dataset"
   project_id  = "proj-abc123"
   description = "Comprehensive dataset with all configuration options"
-  public      = false
   metadata = {
     data_type       = "conversation"
     use_case        = "summarization"

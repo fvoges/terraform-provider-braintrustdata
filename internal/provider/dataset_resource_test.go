@@ -22,7 +22,6 @@ func TestAccDatasetResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("braintrustdata_dataset.test", "id"),
 					resource.TestCheckResourceAttrSet("braintrustdata_dataset.test", "project_id"),
 					resource.TestCheckResourceAttrSet("braintrustdata_dataset.test", "created"),
-					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "public", "false"),
 				),
 			},
 			// ImportState testing
@@ -58,29 +57,6 @@ func TestAccDatasetResource_WithMetadataAndTags(t *testing.T) {
 					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "tags.#", "2"),
 					resource.TestCheckTypeSetElemAttr("braintrustdata_dataset.test", "tags.*", "ml"),
 					resource.TestCheckTypeSetElemAttr("braintrustdata_dataset.test", "tags.*", "production"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccDatasetResource_PublicToggle(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccDatasetResourceConfigWithPublic("test-dataset-public", true),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "name", "test-dataset-public"),
-					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "public", "true"),
-				),
-			},
-			{
-				Config: testAccDatasetResourceConfigWithPublic("test-dataset-public", false),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "name", "test-dataset-public"),
-					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "public", "false"),
 				),
 			},
 		},
@@ -173,20 +149,6 @@ resource "braintrustdata_dataset" "test" {
   tags = ["ml", "production"]
 }
 `
-}
-
-func testAccDatasetResourceConfigWithPublic(name string, public bool) string {
-	return fmt.Sprintf(`
-resource "braintrustdata_project" "test" {
-  name = "test-project-for-dataset"
-}
-
-resource "braintrustdata_dataset" "test" {
-  project_id = braintrustdata_project.test.id
-  name       = %[1]q
-  public     = %[2]t
-}
-`, name, public)
 }
 
 func testAccDatasetResourceConfigForProject(name, projectName string) string {

@@ -48,7 +48,6 @@ locals {
     id          = data.braintrustdata_dataset.by_id.id
     name        = data.braintrustdata_dataset.by_id.name
     description = data.braintrustdata_dataset.by_id.description
-    is_public   = data.braintrustdata_dataset.by_id.public
   }
 }
 ```
