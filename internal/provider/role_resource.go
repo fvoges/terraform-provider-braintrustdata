@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,12 +30,14 @@ type RoleResource struct {
 
 // RoleResourceModel describes the resource data model.
 type RoleResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	OrgID       types.String `tfsdk:"org_id"`
-	Description types.String `tfsdk:"description"`
-	Created     types.String `tfsdk:"created"`
-	UserID      types.String `tfsdk:"user_id"`
+	ID                types.String `tfsdk:"id"`
+	Name              types.String `tfsdk:"name"`
+	OrgID             types.String `tfsdk:"org_id"`
+	Description       types.String `tfsdk:"description"`
+	MemberPermissions types.List   `tfsdk:"member_permissions"`
+	MemberRoles       types.List   `tfsdk:"member_roles"`
+	Created           types.String `tfsdk:"created"`
+	UserID            types.String `tfsdk:"user_id"`
 }
 
 // Metadata implements resource.Resource.
@@ -66,6 +69,16 @@ func (r *RoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"description": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "A description of the role.",
+			},
+			"member_permissions": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "List of permissions assigned to members of this role.",
+			},
+			"member_roles": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "List of role IDs assigned to members of this role.",
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
@@ -108,10 +121,20 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	memberPermissions, diags := listToStringSlice(ctx, data.MemberPermissions)
+	resp.Diagnostics.Append(diags...)
+	memberRoles, diags := listToStringSlice(ctx, data.MemberRoles)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Create role via API
 	role, err := r.client.CreateRole(ctx, &client.CreateRoleRequest{
-		Name:        data.Name.ValueString(),
-		Description: data.Description.ValueString(),
+		Name:              data.Name.ValueString(),
+		Description:       data.Description.ValueString(),
+		MemberPermissions: memberPermissions,
+		MemberRoles:       memberRoles,
 	})
 
 	if err != nil {
@@ -119,12 +142,16 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Update model with response data
-	data.ID = types.StringValue(role.ID)
-	data.OrgID = types.StringValue(role.OrgID)
-	data.Created = types.StringValue(role.Created)
-	if role.UserID != "" {
-		data.UserID = types.StringValue(role.UserID)
+	// Read role after creation to ensure membership fields are populated.
+	role, err = r.client.GetRole(ctx, role.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role after creation, got error: %s", err))
+		return
+	}
+
+	resp.Diagnostics.Append(populateRoleState(ctx, &data, role)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -158,13 +185,9 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	// Update model with response data
-	data.Name = types.StringValue(role.Name)
-	data.Description = types.StringValue(role.Description)
-	data.OrgID = types.StringValue(role.OrgID)
-	data.Created = types.StringValue(role.Created)
-	if role.UserID != "" {
-		data.UserID = types.StringValue(role.UserID)
+	resp.Diagnostics.Append(populateRoleState(ctx, &data, role)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -183,10 +206,29 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	currentMemberPermissions, diags := listToStringSlice(ctx, state.MemberPermissions)
+	resp.Diagnostics.Append(diags...)
+	currentMemberRoles, diags := listToStringSlice(ctx, state.MemberRoles)
+	resp.Diagnostics.Append(diags...)
+	desiredMemberPermissions, diags := listToStringSlice(ctx, data.MemberPermissions)
+	resp.Diagnostics.Append(diags...)
+	desiredMemberRoles, diags := listToStringSlice(ctx, data.MemberRoles)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	addMemberPermissions, removeMemberPermissions := computeStringSliceDiff(currentMemberPermissions, desiredMemberPermissions)
+	addMemberRoles, removeMemberRoles := computeStringSliceDiff(currentMemberRoles, desiredMemberRoles)
+
 	// Update role via API
 	role, err := r.client.UpdateRole(ctx, data.ID.ValueString(), &client.UpdateRoleRequest{
-		Name:        data.Name.ValueString(),
-		Description: data.Description.ValueString(),
+		Name:                    data.Name.ValueString(),
+		Description:             data.Description.ValueString(),
+		AddMemberPermissions:    addMemberPermissions,
+		RemoveMemberPermissions: removeMemberPermissions,
+		AddMemberRoles:          addMemberRoles,
+		RemoveMemberRoles:       removeMemberRoles,
 	})
 
 	if err != nil {
@@ -194,15 +236,17 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	// Update model with response data
-	data.Name = types.StringValue(role.Name)
-	data.Description = types.StringValue(role.Description)
+	// Read role after update to ensure membership fields are populated.
+	role, err = r.client.GetRole(ctx, role.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role after update, got error: %s", err))
+		return
+	}
 
-	// Preserve computed fields from state
-	data.Created = state.Created
-	data.OrgID = state.OrgID
-	data.ID = state.ID
-	data.UserID = state.UserID
+	resp.Diagnostics.Append(populateRoleState(ctx, &data, role)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -229,4 +273,80 @@ func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 // ImportState implements resource.ResourceWithImportState by importing a role by ID.
 func (r *RoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func listToStringSlice(ctx context.Context, values types.List) ([]string, diag.Diagnostics) {
+	if values.IsNull() || values.IsUnknown() {
+		return nil, nil
+	}
+
+	var result []string
+	diags := values.ElementsAs(ctx, &result, false)
+	return result, diags
+}
+
+func listFromStringSlice(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
+	if len(values) == 0 {
+		return types.ListNull(types.StringType), nil
+	}
+
+	return types.ListValueFrom(ctx, types.StringType, values)
+}
+
+func populateRoleState(ctx context.Context, data *RoleResourceModel, role *client.Role) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	data.ID = types.StringValue(role.ID)
+	data.Name = types.StringValue(role.Name)
+	data.Description = types.StringValue(role.Description)
+	data.OrgID = types.StringValue(role.OrgID)
+	data.Created = types.StringValue(role.Created)
+
+	if role.UserID != "" {
+		data.UserID = types.StringValue(role.UserID)
+	} else {
+		data.UserID = types.StringNull()
+	}
+
+	memberPermissions, listDiags := listFromStringSlice(ctx, role.MemberPermissions)
+	diags.Append(listDiags...)
+	memberRoles, listDiags := listFromStringSlice(ctx, role.MemberRoles)
+	diags.Append(listDiags...)
+
+	if diags.HasError() {
+		return diags
+	}
+
+	data.MemberPermissions = memberPermissions
+	data.MemberRoles = memberRoles
+
+	return diags
+}
+
+func computeStringSliceDiff(current []string, desired []string) ([]string, []string) {
+	currentSet := make(map[string]struct{}, len(current))
+	for _, value := range current {
+		currentSet[value] = struct{}{}
+	}
+
+	desiredSet := make(map[string]struct{}, len(desired))
+	for _, value := range desired {
+		desiredSet[value] = struct{}{}
+	}
+
+	var additions []string
+	for _, value := range desired {
+		if _, exists := currentSet[value]; !exists {
+			additions = append(additions, value)
+		}
+	}
+
+	var removals []string
+	for _, value := range current {
+		if _, exists := desiredSet[value]; !exists {
+			removals = append(removals, value)
+		}
+	}
+
+	return additions, removals
 }
