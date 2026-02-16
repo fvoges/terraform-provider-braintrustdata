@@ -95,10 +95,13 @@ func TestProviderConfigure_DefaultAPIURL(t *testing.T) {
 
 // TestProviderConfigure_ValidationRequired verifies API key is required
 func TestProviderConfigure_ValidationRequired(t *testing.T) {
-	// Use t.Setenv to set empty values, which automatically restores on cleanup
-	// This ensures test isolation without manual defer logic
-	t.Setenv("BRAINTRUST_API_KEY", "")
-	t.Setenv("BRAINTRUST_ORG_ID", "")
+	// Set empty values to test validation
+	_ = os.Setenv("BRAINTRUST_API_KEY", "")
+	_ = os.Setenv("BRAINTRUST_ORG_ID", "")
+	defer func() {
+		_ = os.Unsetenv("BRAINTRUST_API_KEY")
+		_ = os.Unsetenv("BRAINTRUST_ORG_ID")
+	}()
 
 	// Validation will be tested via acceptance tests
 	// This test documents the requirement
