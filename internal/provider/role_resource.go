@@ -40,6 +40,14 @@ type RoleResourceModel struct {
 	UserID            types.String `tfsdk:"user_id"`
 }
 
+type listValueState int
+
+const (
+	listValueStateKnown listValueState = iota
+	listValueStateNull
+	listValueStateUnknown
+)
+
 // Metadata implements resource.Resource.
 func (r *RoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_role"
@@ -210,16 +218,24 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	resp.Diagnostics.Append(diags...)
 	currentMemberRoles, diags := listToStringSlice(ctx, state.MemberRoles)
 	resp.Diagnostics.Append(diags...)
-	desiredMemberPermissions, diags := listToStringSlice(ctx, data.MemberPermissions)
+	desiredMemberPermissions, desiredMemberPermissionsState, diags := listToStringSliceWithState(ctx, data.MemberPermissions)
 	resp.Diagnostics.Append(diags...)
-	desiredMemberRoles, diags := listToStringSlice(ctx, data.MemberRoles)
+	desiredMemberRoles, desiredMemberRolesState, diags := listToStringSliceWithState(ctx, data.MemberRoles)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	addMemberPermissions, removeMemberPermissions := computeStringSliceDiff(currentMemberPermissions, desiredMemberPermissions)
-	addMemberRoles, removeMemberRoles := computeStringSliceDiff(currentMemberRoles, desiredMemberRoles)
+	addMemberPermissions, removeMemberPermissions := computeStringSliceDiffForDesiredState(
+		currentMemberPermissions,
+		desiredMemberPermissions,
+		desiredMemberPermissionsState,
+	)
+	addMemberRoles, removeMemberRoles := computeStringSliceDiffForDesiredState(
+		currentMemberRoles,
+		desiredMemberRoles,
+		desiredMemberRolesState,
+	)
 
 	// Update role via API
 	role, err := r.client.UpdateRole(ctx, data.ID.ValueString(), &client.UpdateRoleRequest{
@@ -276,13 +292,33 @@ func (r *RoleResource) ImportState(ctx context.Context, req resource.ImportState
 }
 
 func listToStringSlice(ctx context.Context, values types.List) ([]string, diag.Diagnostics) {
-	if values.IsNull() || values.IsUnknown() {
-		return nil, nil
+	result, _, diags := listToStringSliceWithState(ctx, values)
+	return result, diags
+}
+
+func listToStringSliceWithState(ctx context.Context, values types.List) ([]string, listValueState, diag.Diagnostics) {
+	if values.IsNull() {
+		return nil, listValueStateNull, nil
+	}
+	if values.IsUnknown() {
+		return nil, listValueStateUnknown, nil
 	}
 
-	var result []string
-	diags := values.ElementsAs(ctx, &result, false)
-	return result, diags
+	var elements []types.String
+	diags := values.ElementsAs(ctx, &elements, true)
+	if diags.HasError() {
+		return nil, listValueStateKnown, diags
+	}
+
+	result := make([]string, 0, len(elements))
+	for _, element := range elements {
+		if element.IsNull() || element.IsUnknown() {
+			continue
+		}
+		result = append(result, element.ValueString())
+	}
+
+	return result, listValueStateKnown, diags
 }
 
 func listFromStringSlice(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
@@ -349,4 +385,12 @@ func computeStringSliceDiff(current []string, desired []string) ([]string, []str
 	}
 
 	return additions, removals
+}
+
+func computeStringSliceDiffForDesiredState(current []string, desired []string, desiredState listValueState) ([]string, []string) {
+	if desiredState == listValueStateUnknown {
+		return nil, nil
+	}
+
+	return computeStringSliceDiff(current, desired)
 }
