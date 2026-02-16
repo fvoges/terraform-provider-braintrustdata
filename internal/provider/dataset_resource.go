@@ -29,7 +29,6 @@ type DatasetResource struct {
 
 // DatasetResourceModel describes the resource data model.
 type DatasetResourceModel struct {
-	Tags        types.Set    `tfsdk:"tags"`
 	Metadata    types.Map    `tfsdk:"metadata"`
 	ID          types.String `tfsdk:"id"`
 	ProjectID   types.String `tfsdk:"project_id"`
@@ -77,11 +76,6 @@ func (r *DatasetResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				ElementType:         types.StringType,
 				Optional:            true,
 				MarkdownDescription: "Metadata associated with the dataset as key-value pairs.",
-			},
-			"tags": schema.SetAttribute{
-				ElementType:         types.StringType,
-				Optional:            true,
-				MarkdownDescription: "Tags associated with the dataset.",
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
@@ -151,22 +145,12 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	// Convert tags from Terraform Set to Go slice
-	var tags []string
-	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
-		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	// Create dataset via API
 	dataset, err := r.client.CreateDataset(ctx, &client.CreateDatasetRequest{
 		ProjectID:   data.ProjectID.ValueString(),
 		Name:        data.Name.ValueString(),
 		Description: data.Description.ValueString(),
 		Metadata:    metadata,
-		Tags:        tags,
 	})
 
 	if err != nil {
@@ -212,18 +196,6 @@ func (r *DatasetResource) Create(ctx context.Context, req resource.CreateRequest
 		data.Metadata = metadataValue
 	} else {
 		data.Metadata = types.MapNull(types.StringType)
-	}
-
-	// Convert tags from Go slice to Terraform Set
-	if len(dataset.Tags) > 0 {
-		tagsSet, diags := types.SetValueFrom(ctx, types.StringType, dataset.Tags)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.Tags = tagsSet
-	} else {
-		data.Tags = types.SetNull(types.StringType)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -289,18 +261,6 @@ func (r *DatasetResource) Read(ctx context.Context, req resource.ReadRequest, re
 		data.Metadata = types.MapNull(types.StringType)
 	}
 
-	// Convert tags from Go slice to Terraform Set
-	if len(dataset.Tags) > 0 {
-		tagsSet, diags := types.SetValueFrom(ctx, types.StringType, dataset.Tags)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.Tags = tagsSet
-	} else {
-		data.Tags = types.SetNull(types.StringType)
-	}
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -352,24 +312,11 @@ func (r *DatasetResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	// If IsUnknown, metadata remains nil and field is omitted from request
 
-	// Convert tags from Terraform Set to Go slice
-	// NOTE: Tags cannot be explicitly cleared due to omitempty JSON tag.
-	// Removing tags from config will leave existing tags unchanged.
-	// This matches the behavior of experiments_resource.go.
-	var tags []string
-	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
-		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	// Update dataset via API
 	dataset, err := r.client.UpdateDataset(ctx, data.ID.ValueString(), &client.UpdateDatasetRequest{
 		Name:        data.Name.ValueString(),
 		Description: data.Description.ValueString(),
 		Metadata:    metadata,
-		Tags:        tags,
 	})
 
 	if err != nil {
@@ -399,18 +346,6 @@ func (r *DatasetResource) Update(ctx context.Context, req resource.UpdateRequest
 		data.Metadata = metadataValue
 	} else {
 		data.Metadata = types.MapNull(types.StringType)
-	}
-
-	// Convert tags from Go slice to Terraform Set
-	if len(dataset.Tags) > 0 {
-		tagsSet, diags := types.SetValueFrom(ctx, types.StringType, dataset.Tags)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.Tags = tagsSet
-	} else {
-		data.Tags = types.SetNull(types.StringType)
 	}
 
 	// Preserve fields from state that aren't returned by update API

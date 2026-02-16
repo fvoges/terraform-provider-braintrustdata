@@ -37,10 +37,6 @@ output "dataset_metadata" {
   value = data.braintrustdata_dataset.by_name.metadata
 }
 
-output "dataset_tags" {
-  value = data.braintrustdata_dataset.by_name.tags
-}
-
 # Use dataset data in another resource
 # For example, reference the dataset in documentation or reports
 locals {
@@ -67,5 +63,4 @@ locals {
 - `description` (String) A description of the dataset.
 - `metadata` (Map of String) Metadata associated with the dataset as key-value pairs.
 - `org_id` (String) The ID of the organization this dataset belongs to.
-- `tags` (Set of String) Tags associated with the dataset.
 - `user_id` (String) The ID of the user who created the dataset.

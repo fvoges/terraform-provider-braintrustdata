@@ -43,20 +43,17 @@ func TestAccDatasetResource(t *testing.T) {
 	})
 }
 
-func TestAccDatasetResource_WithMetadataAndTags(t *testing.T) {
+func TestAccDatasetResource_WithMetadata(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatasetResourceConfigWithMetadataAndTags(),
+				Config: testAccDatasetResourceConfigWithMetadata(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "name", "test-dataset-metadata"),
 					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "metadata.environment", "test"),
 					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "metadata.version", "1.0"),
-					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "tags.#", "2"),
-					resource.TestCheckTypeSetElemAttr("braintrustdata_dataset.test", "tags.*", "ml"),
-					resource.TestCheckTypeSetElemAttr("braintrustdata_dataset.test", "tags.*", "production"),
 				),
 			},
 		},
@@ -94,14 +91,14 @@ func TestAccDatasetResource_ProjectIDChange(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatasetResourceConfigForProject("test-dataset", "project1"),
+				Config: testAccDatasetResourceConfigForProject("test-dataset", "test1"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("braintrustdata_dataset.test", "name", "test-dataset"),
 					resource.TestCheckResourceAttrPair("braintrustdata_dataset.test", "project_id", "braintrustdata_project.test1", "id"),
 				),
 			},
 			{
-				Config: testAccDatasetResourceConfigForProject("test-dataset", "project2"),
+				Config: testAccDatasetResourceConfigForProject("test-dataset", "test2"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("braintrustdata_dataset.test", plancheck.ResourceActionReplace),
@@ -130,7 +127,7 @@ resource "braintrustdata_dataset" "test" {
 `, name, description)
 }
 
-func testAccDatasetResourceConfigWithMetadataAndTags() string {
+func testAccDatasetResourceConfigWithMetadata() string {
 	return `
 resource "braintrustdata_project" "test" {
   name = "test-project-for-dataset"
@@ -139,14 +136,12 @@ resource "braintrustdata_project" "test" {
 resource "braintrustdata_dataset" "test" {
   project_id  = braintrustdata_project.test.id
   name        = "test-dataset-metadata"
-  description = "Dataset with metadata and tags"
+  description = "Dataset with metadata"
 
   metadata = {
     environment = "test"
     version     = "1.0"
   }
-
-  tags = ["ml", "production"]
 }
 `
 }
