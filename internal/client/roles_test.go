@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -215,6 +217,114 @@ func TestUpdateRole(t *testing.T) {
 				t.Errorf("expected Name %s, got %s", tt.response.Name, role.Name)
 			}
 		})
+	}
+}
+
+func TestCreateRole_RequestPayloadShape(t *testing.T) {
+	t.Parallel()
+
+	req := &CreateRoleRequest{
+		Name:        "admin",
+		Description: "Administrator role",
+		MemberPermissions: []RoleMemberPermission{
+			{Permission: "read"},
+			{Permission: "update", RestrictObjectType: "project"},
+		},
+		MemberRoles: []string{"role-a"},
+	}
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed reading request body: %v", err)
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("failed unmarshalling request body: %v", err)
+		}
+
+		gotPerms, ok := payload["member_permissions"].([]any)
+		if !ok {
+			t.Fatalf("member_permissions should be a JSON array, got=%T", payload["member_permissions"])
+		}
+		wantPerms := []any{
+			map[string]any{"permission": "read"},
+			map[string]any{"permission": "update", "restrict_object_type": "project"},
+		}
+		if !reflect.DeepEqual(gotPerms, wantPerms) {
+			t.Fatalf("member_permissions payload mismatch: got=%#v want=%#v", gotPerms, wantPerms)
+		}
+
+		gotRoles, ok := payload["member_roles"].([]any)
+		if !ok {
+			t.Fatalf("member_roles should be a JSON array, got=%T", payload["member_roles"])
+		}
+		wantRoles := []any{"role-a"}
+		if !reflect.DeepEqual(gotRoles, wantRoles) {
+			t.Fatalf("member_roles payload mismatch: got=%#v want=%#v", gotRoles, wantRoles)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(Role{ID: "role-1", Name: "admin"})
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key", server.URL, "test-org")
+	client.httpClient = server.Client()
+
+	_, err := client.CreateRole(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateRole_RequestPayloadShape(t *testing.T) {
+	t.Parallel()
+
+	req := &UpdateRoleRequest{
+		AddMemberPermissions: []RoleMemberPermission{
+			{Permission: "read"},
+		},
+		RemoveMemberPermissions: []RoleMemberPermission{
+			{Permission: "delete", RestrictObjectType: "dataset"},
+		},
+		AddMemberRoles:    []string{"role-a"},
+		RemoveMemberRoles: []string{"role-b"},
+	}
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed reading request body: %v", err)
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("failed unmarshalling request body: %v", err)
+		}
+
+		want := map[string]any{
+			"add_member_permissions":    []any{map[string]any{"permission": "read"}},
+			"remove_member_permissions": []any{map[string]any{"permission": "delete", "restrict_object_type": "dataset"}},
+			"add_member_roles":          []any{"role-a"},
+			"remove_member_roles":       []any{"role-b"},
+		}
+		for key, expected := range want {
+			if !reflect.DeepEqual(payload[key], expected) {
+				t.Fatalf("%s payload mismatch: got=%#v want=%#v", key, payload[key], expected)
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(Role{ID: "role-1", Name: "admin"})
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key", server.URL, "test-org")
+	client.httpClient = server.Client()
+
+	_, err := client.UpdateRole(context.Background(), "role-1", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

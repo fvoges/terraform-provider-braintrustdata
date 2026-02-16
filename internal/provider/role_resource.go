@@ -129,21 +129,14 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	memberPermissions, diags := listToStringSlice(ctx, data.MemberPermissions)
-	resp.Diagnostics.Append(diags...)
-	memberRoles, diags := listToStringSlice(ctx, data.MemberRoles)
+	createReq, diags := buildRoleCreateRequest(ctx, data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Create role via API
-	role, err := r.client.CreateRole(ctx, &client.CreateRoleRequest{
-		Name:              data.Name.ValueString(),
-		Description:       data.Description.ValueString(),
-		MemberPermissions: memberPermissions,
-		MemberRoles:       memberRoles,
-	})
+	role, err := r.client.CreateRole(ctx, createReq)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role, got error: %s", err))
@@ -241,8 +234,8 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	role, err := r.client.UpdateRole(ctx, data.ID.ValueString(), &client.UpdateRoleRequest{
 		Name:                    data.Name.ValueString(),
 		Description:             data.Description.ValueString(),
-		AddMemberPermissions:    addMemberPermissions,
-		RemoveMemberPermissions: removeMemberPermissions,
+		AddMemberPermissions:    roleMemberPermissionsFromStrings(addMemberPermissions),
+		RemoveMemberPermissions: roleMemberPermissionsFromStrings(removeMemberPermissions),
 		AddMemberRoles:          addMemberRoles,
 		RemoveMemberRoles:       removeMemberRoles,
 	})
@@ -296,6 +289,33 @@ func listToStringSlice(ctx context.Context, values types.List) ([]string, diag.D
 	return result, diags
 }
 
+func buildRoleCreateRequest(ctx context.Context, data RoleResourceModel) (*client.CreateRoleRequest, diag.Diagnostics) {
+	createReq := &client.CreateRoleRequest{
+		Name:        data.Name.ValueString(),
+		Description: data.Description.ValueString(),
+	}
+
+	memberPermissions, memberPermissionsState, diags := listToStringSliceWithState(ctx, data.MemberPermissions)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	memberRoles, memberRolesState, memberRoleDiags := listToStringSliceWithState(ctx, data.MemberRoles)
+	diags.Append(memberRoleDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	if memberPermissionsState == listValueStateKnown && len(memberPermissions) > 0 {
+		createReq.MemberPermissions = roleMemberPermissionsFromStrings(memberPermissions)
+	}
+	if memberRolesState == listValueStateKnown && len(memberRoles) > 0 {
+		createReq.MemberRoles = memberRoles
+	}
+
+	return createReq, diags
+}
+
 func listToStringSliceWithState(ctx context.Context, values types.List) ([]string, listValueState, diag.Diagnostics) {
 	if values.IsNull() {
 		return nil, listValueStateNull, nil
@@ -344,17 +364,23 @@ func populateRoleState(ctx context.Context, data *RoleResourceModel, role *clien
 		data.UserID = types.StringNull()
 	}
 
-	memberPermissions, listDiags := listFromStringSlice(ctx, role.MemberPermissions)
-	diags.Append(listDiags...)
-	memberRoles, listDiags := listFromStringSlice(ctx, role.MemberRoles)
-	diags.Append(listDiags...)
-
-	if diags.HasError() {
-		return diags
+	if role.MemberPermissions != nil {
+		memberPermissions, listDiags := listFromStringSlice(ctx, roleMemberPermissionStrings(role.MemberPermissions))
+		diags.Append(listDiags...)
+		if diags.HasError() {
+			return diags
+		}
+		data.MemberPermissions = memberPermissions
 	}
 
-	data.MemberPermissions = memberPermissions
-	data.MemberRoles = memberRoles
+	if role.MemberRoles != nil {
+		memberRoles, listDiags := listFromStringSlice(ctx, role.MemberRoles)
+		diags.Append(listDiags...)
+		if diags.HasError() {
+			return diags
+		}
+		data.MemberRoles = memberRoles
+	}
 
 	return diags
 }
@@ -393,4 +419,35 @@ func computeStringSliceDiffForDesiredState(current []string, desired []string, d
 	}
 
 	return computeStringSliceDiff(current, desired)
+}
+
+func roleMemberPermissionsFromStrings(permissions []string) []client.RoleMemberPermission {
+	if len(permissions) == 0 {
+		return nil
+	}
+
+	memberPermissions := make([]client.RoleMemberPermission, 0, len(permissions))
+	for _, permission := range permissions {
+		memberPermissions = append(memberPermissions, client.RoleMemberPermission{
+			Permission: permission,
+		})
+	}
+
+	return memberPermissions
+}
+
+func roleMemberPermissionStrings(memberPermissions []client.RoleMemberPermission) []string {
+	if len(memberPermissions) == 0 {
+		return nil
+	}
+
+	permissions := make([]string, 0, len(memberPermissions))
+	for _, memberPermission := range memberPermissions {
+		if memberPermission.Permission == "" {
+			continue
+		}
+		permissions = append(permissions, memberPermission.Permission)
+	}
+
+	return permissions
 }
