@@ -80,7 +80,6 @@ resource "braintrustdata_dataset" "complete" {
 
 - `description` (String) A description of the dataset.
 - `metadata` (Map of String) Metadata associated with the dataset as key-value pairs.
-- `tags` (Set of String) Tags associated with the dataset.
 
 ### Read-Only
 
