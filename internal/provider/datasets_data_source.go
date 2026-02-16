@@ -33,7 +33,6 @@ type DatasetsDataSourceModel struct {
 
 // DatasetsDataSourceDataset represents a single dataset in the list.
 type DatasetsDataSourceDataset struct {
-	Tags        types.Set    `tfsdk:"tags"`
 	Metadata    types.Map    `tfsdk:"metadata"`
 	ID          types.String `tfsdk:"id"`
 	ProjectID   types.String `tfsdk:"project_id"`
@@ -106,12 +105,7 @@ func (d *DatasetsDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Computed:            true,
 							MarkdownDescription: "Metadata associated with the dataset as key-value pairs.",
 						},
-						"tags": schema.SetAttribute{
-							ElementType:         types.StringType,
-							Computed:            true,
-							MarkdownDescription: "Tags associated with the dataset.",
 						},
-					},
 				},
 			},
 		},
@@ -203,18 +197,6 @@ func (d *DatasetsDataSource) Read(ctx context.Context, req datasource.ReadReques
 				metadataMap = types.MapNull(types.StringType)
 			}
 
-			var tagsSet types.Set
-			if len(dataset.Tags) > 0 {
-				var diags diag.Diagnostics
-				tagsSet, diags = types.SetValueFrom(ctx, types.StringType, dataset.Tags)
-				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-			} else {
-				tagsSet = types.SetNull(types.StringType)
-			}
-
 			datasetModel := DatasetsDataSourceDataset{
 				ID:          types.StringValue(dataset.ID),
 				Name:        types.StringValue(dataset.Name),
@@ -224,7 +206,6 @@ func (d *DatasetsDataSource) Read(ctx context.Context, req datasource.ReadReques
 				UserID:      types.StringValue(dataset.UserID),
 				OrgID:       types.StringValue(dataset.OrgID),
 				Metadata:    metadataMap,
-				Tags:        tagsSet,
 			}
 
 			data.Datasets = append(data.Datasets, datasetModel)

@@ -38,7 +38,6 @@ func TestCreateDataset(t *testing.T) {
 			Name:        req.Name,
 			Description: req.Description,
 			Metadata:    req.Metadata,
-			Tags:        req.Tags,
 			Created:     time.Now().Format(time.RFC3339),
 			UserID:      "user-123",
 			OrgID:       "org-test",
@@ -62,7 +61,6 @@ func TestCreateDataset(t *testing.T) {
 		Name:        "Test Dataset",
 		Description: "A test dataset",
 		Metadata:    metadata,
-		Tags:        []string{"images", "test"},
 	})
 
 	if err != nil {
@@ -77,9 +75,6 @@ func TestCreateDataset(t *testing.T) {
 	}
 	if dataset.ProjectID != "project-123" {
 		t.Errorf("expected project_id 'project-123', got %s", dataset.ProjectID)
-	}
-	if len(dataset.Tags) != 2 {
-		t.Errorf("expected 2 tags, got %d", len(dataset.Tags))
 	}
 }
 
@@ -101,7 +96,6 @@ func TestGetDataset(t *testing.T) {
 			Metadata: map[string]interface{}{
 				"source": "test-suite",
 			},
-			Tags:    []string{"images", "test"},
 			Created: time.Now().Format(time.RFC3339),
 			UserID:  "user-123",
 			OrgID:   "org-test",
@@ -186,7 +180,6 @@ func TestUpdateDataset(t *testing.T) {
 			Name:        req.Name,
 			Description: req.Description,
 			Metadata:    metadata,
-			Tags:        req.Tags,
 			Created:     time.Now().Format(time.RFC3339),
 			UserID:      "user-123",
 			OrgID:       "org-test",
@@ -207,7 +200,6 @@ func TestUpdateDataset(t *testing.T) {
 		Name:        "Updated Dataset",
 		Description: "Updated description",
 		Metadata:    metadata,
-		Tags:        []string{"updated"},
 	})
 
 	if err != nil {
@@ -216,9 +208,6 @@ func TestUpdateDataset(t *testing.T) {
 
 	if dataset.Name != "Updated Dataset" {
 		t.Errorf("expected name 'Updated Dataset', got %s", dataset.Name)
-	}
-	if len(dataset.Tags) != 1 {
-		t.Errorf("expected 1 tag, got %d", len(dataset.Tags))
 	}
 }
 

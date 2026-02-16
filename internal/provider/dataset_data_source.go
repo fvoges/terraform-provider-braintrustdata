@@ -24,7 +24,6 @@ type DatasetDataSource struct {
 
 // DatasetDataSourceModel describes the data source data model.
 type DatasetDataSourceModel struct {
-	Tags        types.Set    `tfsdk:"tags"`
 	Metadata    types.Map    `tfsdk:"metadata"`
 	ID          types.String `tfsdk:"id"`
 	ProjectID   types.String `tfsdk:"project_id"`
@@ -82,12 +81,7 @@ func (d *DatasetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:            true,
 				MarkdownDescription: "Metadata associated with the dataset as key-value pairs.",
 			},
-			"tags": schema.SetAttribute{
-				ElementType:         types.StringType,
-				Computed:            true,
-				MarkdownDescription: "Tags associated with the dataset.",
 			},
-		},
 	}
 }
 
@@ -225,17 +219,6 @@ func (d *DatasetDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		data.Metadata = metadataValue
 	} else {
 		data.Metadata = types.MapNull(types.StringType)
-	}
-
-	if len(dataset.Tags) > 0 {
-		tagsSet, diags := types.SetValueFrom(ctx, types.StringType, dataset.Tags)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.Tags = tagsSet
-	} else {
-		data.Tags = types.SetNull(types.StringType)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

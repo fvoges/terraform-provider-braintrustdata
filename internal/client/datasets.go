@@ -26,7 +26,6 @@ type Dataset struct {
 	DeletedAt   string                 `json:"deleted_at,omitempty"`
 	UserID      string                 `json:"user_id,omitempty"`
 	OrgID       string                 `json:"org_id,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
 }
 
 // CreateDatasetRequest represents a request to create a dataset
@@ -35,15 +34,13 @@ type CreateDatasetRequest struct {
 	ProjectID   string                 `json:"project_id"`
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
 }
 
 // UpdateDatasetRequest represents a request to update a dataset
 type UpdateDatasetRequest struct {
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 	Name        string                 `json:"name,omitempty"`
 	Description string                 `json:"description,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
 }
 
 // ListDatasetsOptions represents options for listing datasets

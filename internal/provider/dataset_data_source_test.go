@@ -90,7 +90,7 @@ func TestAccDatasetDataSource_NeitherIDNorName(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDatasetDataSourceConfigNeitherIDNorName(),
-				ExpectError: regexp.MustCompile("Must specify either 'id' or both 'name' and 'project_id' to look up the dataset."),
+				ExpectError: regexp.MustCompile(`Must specify either 'id' or both 'name' and 'project_id' to look up the\s+dataset\.`),
 			},
 		},
 	})
