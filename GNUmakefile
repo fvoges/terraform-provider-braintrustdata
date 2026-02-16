@@ -10,7 +10,7 @@ test:
 
 # Run acceptance tests
 testacc:
-	TF_ACC=1 go test ./internal/provider/... -v -count=1 -timeout=120m
+	TF_ACC=1 go test ./internal/provider/... -v -count=1 -run '^TestAcc' -timeout=120m
 
 # Install provider locally for testing
 install: build
