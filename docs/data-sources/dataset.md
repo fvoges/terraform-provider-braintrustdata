@@ -37,10 +37,6 @@ output "dataset_metadata" {
   value = data.braintrustdata_dataset.by_name.metadata
 }
 
-output "dataset_tags" {
-  value = data.braintrustdata_dataset.by_name.tags
-}
-
 # Use dataset data in another resource
 # For example, reference the dataset in documentation or reports
 locals {

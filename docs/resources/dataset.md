@@ -40,7 +40,7 @@ resource "braintrustdata_dataset" "with_description" {
   description = "Curated dataset for evaluating customer support responses"
 }
 
-# Create a dataset with metadata and tags
+# Create a dataset with metadata
 resource "braintrustdata_dataset" "with_metadata" {
   name       = "training-dataset"
   project_id = "proj-abc123"
@@ -50,7 +50,6 @@ resource "braintrustdata_dataset" "with_metadata" {
     sample_count = "10000"
     date_range   = "2024-01-01-to-2024-03-31"
   }
-  tags = ["production", "training", "q1-2024"]
 }
 
 # Create a dataset with all optional attributes
@@ -64,7 +63,6 @@ resource "braintrustdata_dataset" "complete" {
     quality_score   = "0.95"
     annotation_type = "human-labeled"
   }
-  tags = ["ml-ops", "summarization", "high-quality"]
 }
 ```
 

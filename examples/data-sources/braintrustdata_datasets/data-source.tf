@@ -19,18 +19,6 @@ data "braintrustdata_datasets" "filtered" {
   name       = "customer-support-v1"
 }
 
-# Find datasets by tag using for expression
-locals {
-  production_datasets = [
-    for ds in data.braintrustdata_datasets.all.datasets : ds
-    if contains(ds.tags, "production")
-  ]
-}
-
-output "production_dataset_ids" {
-  value = [for ds in local.production_datasets : ds.id]
-}
-
 # Find a specific dataset by name
 locals {
   support_datasets = [
