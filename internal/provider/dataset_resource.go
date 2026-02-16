@@ -77,7 +77,7 @@ func (r *DatasetResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 				MarkdownDescription: "Metadata associated with the dataset as key-value pairs.",
 			},
-				"created": schema.StringAttribute{
+			"created": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The timestamp when the dataset was created.",
 				PlanModifiers: []planmodifier.String{
