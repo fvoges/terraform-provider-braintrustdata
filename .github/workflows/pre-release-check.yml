@@ -59,7 +59,7 @@ jobs:
 
       # SECURITY: Static analysis for vulnerabilities
       - name: Run GoSec Security Scanner
-        uses: securego/gosec@v2.22.11
+        uses: securego/gosec@v2.23.0
         with:
           args: '-no-fail -fmt sarif -out results.sarif ./...'
 
