@@ -46,6 +46,8 @@ output "role_org_id" {
 ### Optional
 
 - `description` (String) A description of the role.
+- `member_permissions` (List of String) List of permissions assigned to members of this role.
+- `member_roles` (List of String) List of role IDs assigned to members of this role.
 
 ### Read-Only
 
