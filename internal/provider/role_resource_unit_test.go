@@ -152,7 +152,7 @@ func TestListToStringSliceWithState(t *testing.T) {
 			wantState: listValueStateKnown,
 		},
 		{
-			name: "known_values_with_null_and_unknown_elements_filtered",
+			name: "known_values_with_null_and_unknown_elements_filtered_without_diagnostics",
 			input: types.ListValueMust(types.StringType, []attr.Value{
 				types.StringValue("read"),
 				types.StringNull(),
@@ -286,19 +286,37 @@ func TestBuildRoleCreateRequest(t *testing.T) {
 			},
 		},
 		{
-			name: "known_empty_or_null_memberships_are_omitted",
+			name: "known_empty_memberships_are_sent_as_empty_lists",
 			data: RoleResourceModel{
 				Name:              types.StringValue("role-3"),
 				Description:       types.StringValue("desc"),
+				MemberPermissions: types.ListValueMust(types.StringType, []attr.Value{}),
+				MemberRoles:       types.ListValueMust(types.StringType, []attr.Value{}),
+			},
+			want: &client.CreateRoleRequest{
+				Name:              "role-3",
+				Description:       "desc",
+				MemberPermissions: []client.RoleMemberPermission{},
+				MemberRoles:       []string{},
+			},
+		},
+		{
+			name: "null_memberships_are_omitted_but_known_empty_after_filtering_is_sent",
+			data: RoleResourceModel{
+				Name:        types.StringValue("role-4"),
+				Description: types.StringValue("desc"),
+				// Null list means "unset" and should be omitted from payload.
 				MemberPermissions: types.ListNull(types.StringType),
+				// Known list with only null/unknown elements is known-empty after filtering.
 				MemberRoles: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringNull(),
 					types.StringUnknown(),
 				}),
 			},
 			want: &client.CreateRoleRequest{
-				Name:        "role-3",
+				Name:        "role-4",
 				Description: "desc",
+				MemberRoles: []string{},
 			},
 		},
 	}

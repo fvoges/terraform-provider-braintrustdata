@@ -306,10 +306,10 @@ func buildRoleCreateRequest(ctx context.Context, data RoleResourceModel) (*clien
 		return nil, diags
 	}
 
-	if memberPermissionsState == listValueStateKnown && len(memberPermissions) > 0 {
+	if memberPermissionsState == listValueStateKnown {
 		createReq.MemberPermissions = roleMemberPermissionsFromStrings(memberPermissions)
 	}
-	if memberRolesState == listValueStateKnown && len(memberRoles) > 0 {
+	if memberRolesState == listValueStateKnown {
 		createReq.MemberRoles = memberRoles
 	}
 
@@ -325,6 +325,8 @@ func listToStringSliceWithState(ctx context.Context, values types.List) ([]strin
 	}
 
 	var elements []types.String
+	// `allowUnhandled=true` is intentional: a known list can still include null/unknown
+	// elements, and we need to filter those values out below rather than erroring.
 	diags := values.ElementsAs(ctx, &elements, true)
 	if diags.HasError() {
 		return nil, listValueStateKnown, diags
@@ -422,7 +424,7 @@ func computeStringSliceDiffForDesiredState(current []string, desired []string, d
 }
 
 func roleMemberPermissionsFromStrings(permissions []string) []client.RoleMemberPermission {
-	if len(permissions) == 0 {
+	if permissions == nil {
 		return nil
 	}
 
