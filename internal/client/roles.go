@@ -10,36 +10,42 @@ import (
 // ErrEmptyRoleID is returned when a role ID is empty.
 var ErrEmptyRoleID = errors.New("role ID cannot be empty")
 
+// RoleMemberPermission represents a role member permission object.
+type RoleMemberPermission struct {
+	Permission         string `json:"permission"`
+	RestrictObjectType string `json:"restrict_object_type,omitempty"`
+}
+
 // Role represents a Braintrust role
 type Role struct {
-	ID                string   `json:"id"`
-	OrgID             string   `json:"org_id,omitempty"`
-	Name              string   `json:"name"`
-	Description       string   `json:"description,omitempty"`
-	Created           string   `json:"created,omitempty"`
-	DeletedAt         string   `json:"deleted_at,omitempty"`
-	UserID            string   `json:"user_id,omitempty"`
-	MemberPermissions []string `json:"member_permissions,omitempty"` // Simplified for now
-	MemberRoles       []string `json:"member_roles,omitempty"`
+	ID                string                 `json:"id"`
+	OrgID             string                 `json:"org_id,omitempty"`
+	Name              string                 `json:"name"`
+	Description       string                 `json:"description,omitempty"`
+	Created           string                 `json:"created,omitempty"`
+	DeletedAt         string                 `json:"deleted_at,omitempty"`
+	UserID            string                 `json:"user_id,omitempty"`
+	MemberPermissions []RoleMemberPermission `json:"member_permissions,omitempty"`
+	MemberRoles       []string               `json:"member_roles,omitempty"`
 }
 
 // CreateRoleRequest represents a request to create a role
 type CreateRoleRequest struct {
-	Name              string   `json:"name"`
-	Description       string   `json:"description,omitempty"`
-	OrgName           string   `json:"org_name,omitempty"`
-	MemberPermissions []string `json:"member_permissions,omitempty"`
-	MemberRoles       []string `json:"member_roles,omitempty"`
+	Name              string                 `json:"name"`
+	Description       string                 `json:"description,omitempty"`
+	OrgName           string                 `json:"org_name,omitempty"`
+	MemberPermissions []RoleMemberPermission `json:"member_permissions,omitempty"`
+	MemberRoles       []string               `json:"member_roles,omitempty"`
 }
 
 // UpdateRoleRequest represents a request to update a role
 type UpdateRoleRequest struct {
-	Name                    string   `json:"name,omitempty"`
-	Description             string   `json:"description,omitempty"`
-	AddMemberPermissions    []string `json:"add_member_permissions,omitempty"`
-	RemoveMemberPermissions []string `json:"remove_member_permissions,omitempty"`
-	AddMemberRoles          []string `json:"add_member_roles,omitempty"`
-	RemoveMemberRoles       []string `json:"remove_member_roles,omitempty"`
+	Name                    string                 `json:"name,omitempty"`
+	Description             string                 `json:"description,omitempty"`
+	AddMemberPermissions    []RoleMemberPermission `json:"add_member_permissions,omitempty"`
+	RemoveMemberPermissions []RoleMemberPermission `json:"remove_member_permissions,omitempty"`
+	AddMemberRoles          []string               `json:"add_member_roles,omitempty"`
+	RemoveMemberRoles       []string               `json:"remove_member_roles,omitempty"`
 }
 
 // ListRolesOptions represents options for listing roles
