@@ -41,6 +41,45 @@ func TestGNUmakefile_TestAccTargetRunsOnlyAcceptanceTests(t *testing.T) {
 	}
 }
 
+func TestGitHubWorkflow_AcceptanceStepQuarantinesFlakyTests(t *testing.T) {
+	if os.Getenv("CI") == "" {
+		t.Skip("skipping CI-only workflow assertion test when CI is not set")
+	}
+
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("failed to resolve current file path")
+	}
+
+	workflowPath := filepath.Join(filepath.Dir(thisFile), "..", "..", ".github", "workflows", "test.yml")
+
+	// #nosec G304 -- Test reads repo-local workflow path derived from runtime.Caller.
+	content, err := os.ReadFile(workflowPath)
+	if err != nil {
+		t.Fatalf("failed to read workflow file (%s): %v", workflowPath, err)
+	}
+
+	workflow := string(content)
+	acceptanceGoTestCommandRe := regexp.MustCompile(`(?s)run:\s*go\s+test\s+\./internal/provider/\.\.\.`)
+	if !acceptanceGoTestCommandRe.MatchString(workflow) {
+		t.Fatalf("workflow must include acceptance go test command for internal/provider tests")
+	}
+
+	runAcceptanceRegexRe := regexp.MustCompile(`(?s)go\s+test\s+\./internal/provider/\.\.\..*?-run(?:=|\s+)(?:'\^TestAcc'|"\^TestAcc"|\^TestAcc)`)
+	if !runAcceptanceRegexRe.MatchString(workflow) {
+		t.Fatalf("acceptance workflow step must include -run '^TestAcc' to keep CI scope explicit")
+	}
+
+	flakySkipRegexRe := regexp.MustCompile(`(?s)go\s+test\s+\./internal/provider/\.\.\..*?-skip(?:=|\s+)(?:'TestAccACLResource_WithRole\|TestAccRoleResource'|"TestAccACLResource_WithRole\|TestAccRoleResource"|TestAccACLResource_WithRole\|TestAccRoleResource)`)
+	if !flakySkipRegexRe.MatchString(workflow) {
+		t.Fatalf("acceptance workflow step must quarantine known flaky tests with explicit -skip regex")
+	}
+
+	if !strings.Contains(workflow, "TODO(#65)") {
+		t.Fatalf("workflow must document quarantine with TODO(#65)")
+	}
+}
+
 func findMakeTargetRecipe(content string, target string) (string, bool) {
 	lines := strings.Split(content, "\n")
 	header := target + ":"

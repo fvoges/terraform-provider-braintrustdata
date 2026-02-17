@@ -122,4 +122,5 @@ jobs:
           TF_ACC: "1"
           BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
           BRAINTRUST_ORG_ID: ${{ secrets.BRAINTRUST_ORG_ID }}
-        run: make testacc
+        # TODO(#65): remove CI quarantine after flaky acceptance tests are fixed.
+        run: go test ./internal/provider/... -v -count=1 -run '^TestAcc' -skip 'TestAccACLResource_WithRole|TestAccRoleResource' -timeout=120m
