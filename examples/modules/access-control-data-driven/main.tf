@@ -17,6 +17,11 @@ resource "terraform_data" "validate_inputs" {
 
   lifecycle {
     precondition {
+      condition     = length(local.normalized_user_identity_conflicts) == 0
+      error_message = "Duplicate normalized identities in user_id_by_identity: ${join(", ", local.normalized_user_identity_conflicts)}"
+    }
+
+    precondition {
       condition     = length(local.missing_user_identities) == 0
       error_message = "Missing user_id_by_identity entries for identities: ${join(", ", sort(tolist(local.missing_user_identities)))}"
     }
@@ -34,6 +39,11 @@ resource "terraform_data" "validate_inputs" {
     precondition {
       condition     = length(local.missing_binding_group_keys) == 0
       error_message = "project_group_bindings referenced unknown group keys: ${join(", ", sort(tolist(local.missing_binding_group_keys)))}"
+    }
+
+    precondition {
+      condition     = length(local.acl_duplicate_keys) == 0
+      error_message = "project_group_bindings expanded to duplicate canonical ACL keys: ${join(", ", local.acl_duplicate_keys)}"
     }
   }
 }
@@ -55,7 +65,7 @@ resource "braintrustdata_group" "role_groups" {
 
   member_users = local.group_member_user_ids[each.key]
   member_groups = [
-    for member_group_key in sort(each.value.member_group_keys) :
+    for member_group_key in sort(distinct(compact(each.value.member_group_keys))) :
     braintrustdata_group.role_groups[member_group_key].id
   ]
 

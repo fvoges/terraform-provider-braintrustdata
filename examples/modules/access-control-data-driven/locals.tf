@@ -1,4 +1,17 @@
 locals {
+  normalized_user_identities = [
+    for identity, _ in var.user_id_by_identity :
+    (var.identity_case_insensitive ? lower(trimspace(identity)) : trimspace(identity))
+  ]
+
+  normalized_user_identity_conflicts = sort([
+    for normalized_identity in distinct(local.normalized_user_identities) : normalized_identity
+    if normalized_identity != "" && length([
+      for candidate in local.normalized_user_identities : candidate
+      if candidate == normalized_identity
+    ]) > 1
+  ])
+
   normalized_user_id_by_identity = {
     for identity, user_id in var.user_id_by_identity :
     (var.identity_case_insensitive ? lower(trimspace(identity)) : trimspace(identity)) => trimspace(user_id)
@@ -22,7 +35,7 @@ locals {
         (var.identity_case_insensitive ? lower(trimspace(identity)) : trimspace(identity))
       ]
       member_user_ids   = [for id in tolist(try(group.member_user_ids, [])) : trimspace(id)]
-      member_group_keys = tolist(try(group.member_group_keys, []))
+      member_group_keys = [for member_group_key in tolist(try(group.member_group_keys, [])) : trimspace(member_group_key)]
     }
   }
 
@@ -85,4 +98,12 @@ locals {
   acl_entries_by_key = {
     for entry in local.acl_entries : entry.key => entry
   }
+
+  acl_duplicate_keys = sort([
+    for acl_key in distinct([for entry in local.acl_entries : entry.key]) : acl_key
+    if length([
+      for entry in local.acl_entries : entry.key
+      if entry.key == acl_key
+    ]) > 1
+  ])
 }

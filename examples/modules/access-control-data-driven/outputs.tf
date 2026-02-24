@@ -15,7 +15,7 @@ output "group_ids_by_key" {
 }
 
 output "acl_ids_by_key" {
-  description = "ACL IDs keyed by canonical binding key project|group|permission|restrict_object_type."
+  description = "ACL IDs keyed by canonical binding key project|group|permission|restrict_object_type where '*' is used when restrict_object_type is null."
   value = {
     for acl_key, resource in braintrustdata_acl.project_group :
     acl_key => resource.id
