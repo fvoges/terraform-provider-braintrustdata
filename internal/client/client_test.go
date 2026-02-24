@@ -34,27 +34,22 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-// TestNewClient_HTTPSOnlyEnforcement verifies that http:// URLs are rejected
-func TestNewClient_HTTPSOnlyEnforcement(t *testing.T) {
+func TestNewClient_DoesNotPanicOnInvalidBaseURL(t *testing.T) {
 	tests := []struct {
-		name    string
-		baseURL string
-		wantErr bool
+		name string
+		url  string
 	}{
 		{
-			name:    "https URL accepted",
-			baseURL: "https://api.braintrust.dev",
-			wantErr: false,
+			name: "http scheme",
+			url:  "http://api.braintrust.dev",
 		},
 		{
-			name:    "http URL rejected",
-			baseURL: "http://api.braintrust.dev",
-			wantErr: true,
+			name: "userinfo in URL",
+			url:  "https://user@api.braintrust.dev",
 		},
 		{
-			name:    "no scheme defaults to https",
-			baseURL: "api.braintrust.dev",
-			wantErr: false,
+			name: "empty URL",
+			url:  "",
 		},
 	}
 
@@ -62,83 +57,53 @@ func TestNewClient_HTTPSOnlyEnforcement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r != nil {
-					if !tt.wantErr {
-						t.Errorf("unexpected panic for URL %q: %v", tt.baseURL, r)
-					}
+					t.Fatalf("unexpected panic for URL %q: %v", tt.url, r)
 				}
 			}()
 
-			client := NewClient("sk-test", tt.baseURL, "org-123")
-			if tt.wantErr && client != nil {
-				t.Errorf("expected error for URL %q, but client was created", tt.baseURL)
-			}
+			_ = NewClient("sk-test", tt.url, "org-123")
 		})
+	}
+}
+
+func TestNewClient_NormalizesBaseURLWithoutScheme(t *testing.T) {
+	client := NewClient("sk-test", "api.braintrust.dev/", "org-123")
+	if client.baseURL != "https://api.braintrust.dev" {
+		t.Fatalf("expected normalized baseURL to be https://api.braintrust.dev, got %q", client.baseURL)
 	}
 }
 
 // TestAuthHeader verifies Bearer token authentication is added correctly
 func TestAuthHeader(t *testing.T) {
 	apiKey := "sk-test-key-123" //nolint:gosec // Test credential
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		expectedAuth := "Bearer " + apiKey
-		if authHeader != expectedAuth {
-			t.Errorf("expected Authorization header %q, got %q", expectedAuth, authHeader)
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"success": true}`))
-	}))
-	defer server.Close()
+	client := NewClient(apiKey, "https://api.braintrust.dev", "org-123")
 
-	client := NewClient(apiKey, server.URL, "org-123")
-	// Use the test server's http client which trusts its own cert
-	client.httpClient = server.Client()
-
-	req, err := http.NewRequest("GET", server.URL+"/test", nil)
+	req, err := http.NewRequest("GET", "https://api.braintrust.dev/test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
 	client.addAuthHeader(req)
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	defer resp.Body.Close() //nolint:errcheck // Test code
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200, got %d", resp.StatusCode)
+	authHeader := req.Header.Get("Authorization")
+	expectedAuth := "Bearer " + apiKey
+	if authHeader != expectedAuth {
+		t.Errorf("expected Authorization header %q, got %q", expectedAuth, authHeader)
 	}
 }
 
 // TestUserAgent verifies user agent is set correctly
 func TestUserAgent(t *testing.T) {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ua := r.Header.Get("User-Agent")
-		if !strings.HasPrefix(ua, "terraform-provider-braintrustdata/") {
-			t.Errorf("expected User-Agent to start with terraform-provider-braintrustdata/, got %q", ua)
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
-	}))
-	defer server.Close()
-
-	client := NewClient("sk-test", server.URL, "org-123")
-	client.httpClient = server.Client()
-
-	req, err := http.NewRequest("GET", server.URL+"/test", nil)
+	client := NewClient("sk-test", "https://api.braintrust.dev", "org-123")
+	req, err := http.NewRequest("GET", "https://api.braintrust.dev/test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
 	client.addAuthHeader(req)
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
+	ua := req.Header.Get("User-Agent")
+	if !strings.HasPrefix(ua, "terraform-provider-braintrustdata/") {
+		t.Errorf("expected User-Agent to start with terraform-provider-braintrustdata/, got %q", ua)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Test code
 }
 
 // TestHTTPTimeout verifies timeout is configured
@@ -229,5 +194,134 @@ func TestDo_Success(t *testing.T) {
 	}
 	if result.Name != "Test" {
 		t.Errorf("expected Name Test, got %s", result.Name)
+	}
+}
+
+func TestDo_RejectsAbsoluteURLPath(t *testing.T) {
+	client := NewClient("sk-test", "https://api.braintrust.dev", "org-123")
+
+	err := client.Do(context.Background(), "GET", "https://example.com/test", nil, nil)
+	if err == nil {
+		t.Fatal("expected error for absolute request URL, got nil")
+	}
+	if !strings.Contains(err.Error(), "absolute request URLs are not allowed") {
+		t.Fatalf("expected absolute URL error, got %v", err)
+	}
+}
+
+func TestDo_AllowsQueryOnlyRelativePath(t *testing.T) {
+	var gotPath string
+	var gotRawQuery string
+	var gotRequestURI string
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotRawQuery = r.URL.RawQuery
+		gotRequestURI = r.URL.RequestURI()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-123")
+	client.httpClient = server.Client()
+
+	err := client.Do(context.Background(), "GET", "?a=b", nil, nil)
+	if err != nil {
+		t.Fatalf("expected query-only relative path to be accepted, got error: %v", err)
+	}
+	if gotPath != "/" {
+		t.Fatalf("expected normalized path '/', got %q", gotPath)
+	}
+	if gotRawQuery != "a=b" {
+		t.Fatalf("expected raw query %q, got %q", "a=b", gotRawQuery)
+	}
+	if gotRequestURI != "/?a=b" {
+		t.Fatalf("expected request URI %q, got %q", "/?a=b", gotRequestURI)
+	}
+}
+
+func TestDo_RejectsInvalidBaseURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		baseURL  string
+		errMatch string
+	}{
+		{
+			name:     "rejects http base URL",
+			baseURL:  "http://api.braintrust.dev",
+			errMatch: "only https is allowed",
+		},
+		{
+			name:     "rejects empty host",
+			baseURL:  "https://",
+			errMatch: "host cannot be empty",
+		},
+		{
+			name:     "rejects user info",
+			baseURL:  "https://user@api.braintrust.dev",
+			errMatch: "user info is not allowed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := NewClient("sk-test", tt.baseURL, "org-123")
+
+			err := client.Do(context.Background(), "GET", "/test", nil, nil)
+			if err == nil {
+				t.Fatalf("expected error for baseURL %q, got nil", tt.baseURL)
+			}
+			if !strings.Contains(err.Error(), tt.errMatch) {
+				t.Fatalf("expected error containing %q, got %v", tt.errMatch, err)
+			}
+		})
+	}
+}
+
+func TestDo_RejectsUnsafeRelativePaths(t *testing.T) {
+	client := NewClient("sk-test", "https://api.braintrust.dev", "org-123")
+
+	tests := []struct {
+		name     string
+		path     string
+		errMatch string
+	}{
+		{
+			name:     "rejects non-rooted path",
+			path:     "test",
+			errMatch: "must be rooted",
+		},
+		{
+			name:     "rejects dot segment traversal",
+			path:     "/v1/../secret",
+			errMatch: "must not contain dot segments",
+		},
+		{
+			name:     "rejects encoded dot segment traversal",
+			path:     "/v1/%2e%2e/secret",
+			errMatch: "must not contain dot segments",
+		},
+		{
+			name:     "rejects scheme-relative absolute URL",
+			path:     "//example.com/secret",
+			errMatch: "absolute request URLs are not allowed",
+		},
+		{
+			name:     "rejects fragment in path",
+			path:     "/v1/test#fragment",
+			errMatch: "must not contain fragments",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := client.Do(context.Background(), "GET", tt.path, nil, nil)
+			if err == nil {
+				t.Fatalf("expected error for path %q, got nil", tt.path)
+			}
+			if !strings.Contains(err.Error(), tt.errMatch) {
+				t.Fatalf("expected error containing %q, got %v", tt.errMatch, err)
+			}
+		})
 	}
 }

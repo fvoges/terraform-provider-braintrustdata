@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -114,7 +115,7 @@ func TestGetAPIKey(t *testing.T) {
 		},
 		{
 			name:           "handles not found",
-			apiKeyID:       "apikey-nonexistent",
+			apiKeyID:       "missing-id",
 			responseStatus: http.StatusNotFound,
 			wantErr:        true,
 		},
@@ -240,7 +241,7 @@ func TestDeleteAPIKey(t *testing.T) {
 		},
 		{
 			name:           "handles not found",
-			apiKeyID:       "apikey-nonexistent",
+			apiKeyID:       "missing-id",
 			responseStatus: http.StatusNotFound,
 			wantErr:        true,
 		},
@@ -364,51 +365,45 @@ func TestListAPIKeys(t *testing.T) {
 
 func TestGetAPIKey_SpecialCharacters(t *testing.T) {
 	tests := []struct {
-		name         string
-		apiKeyID     string
-		expectedPath string
-		response     APIKey
+		name     string
+		apiKeyID string
+		response APIKey
 	}{
 		{
-			name:         "handles ID with slash",
-			apiKeyID:     "apikey/123",
-			expectedPath: "/v1/api_key/apikey/123",
+			name:     "handles ID with slash",
+			apiKeyID: "apikey/123",
 			response: APIKey{
 				ID:   "apikey/123",
 				Name: "Test API Key",
 			},
 		},
 		{
-			name:         "handles ID with space",
-			apiKeyID:     "apikey 456",
-			expectedPath: "/v1/api_key/apikey 456",
+			name:     "handles ID with space",
+			apiKeyID: "apikey 456",
 			response: APIKey{
 				ID:   "apikey 456",
 				Name: "Test API Key",
 			},
 		},
 		{
-			name:         "handles ID with plus sign",
-			apiKeyID:     "apikey+test",
-			expectedPath: "/v1/api_key/apikey+test",
+			name:     "handles ID with plus sign",
+			apiKeyID: "apikey+test",
 			response: APIKey{
 				ID:   "apikey+test",
 				Name: "Test API Key",
 			},
 		},
 		{
-			name:         "handles ID with Unicode",
-			apiKeyID:     "キー",
-			expectedPath: "/v1/api_key/キー",
+			name:     "handles ID with Unicode",
+			apiKeyID: "キー",
 			response: APIKey{
 				ID:   "キー",
 				Name: "Test API Key",
 			},
 		},
 		{
-			name:         "handles ID with ampersand",
-			apiKeyID:     "apikey&test",
-			expectedPath: "/v1/api_key/apikey&test",
+			name:     "handles ID with ampersand",
+			apiKeyID: "apikey&test",
 			response: APIKey{
 				ID:   "apikey&test",
 				Name: "Test API Key",
@@ -419,8 +414,9 @@ func TestGetAPIKey_SpecialCharacters(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != tt.expectedPath {
-					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				expectedEscapedPath := "/v1/api_key/" + url.PathEscape(tt.apiKeyID)
+				if r.URL.EscapedPath() != expectedEscapedPath {
+					t.Errorf("expected escaped path %s, got %s", expectedEscapedPath, r.URL.EscapedPath())
 				}
 				if r.Method != "GET" {
 					t.Errorf("expected GET method, got %s", r.Method)
@@ -448,16 +444,14 @@ func TestGetAPIKey_SpecialCharacters(t *testing.T) {
 
 func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 	tests := []struct {
-		name         string
-		apiKeyID     string
-		expectedPath string
-		request      *UpdateAPIKeyRequest
-		response     APIKey
+		name     string
+		apiKeyID string
+		request  *UpdateAPIKeyRequest
+		response APIKey
 	}{
 		{
-			name:         "handles ID with slash",
-			apiKeyID:     "apikey/123",
-			expectedPath: "/v1/api_key/apikey/123",
+			name:     "handles ID with slash",
+			apiKeyID: "apikey/123",
 			request: &UpdateAPIKeyRequest{
 				Name: "Updated API Key",
 			},
@@ -467,9 +461,8 @@ func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 			},
 		},
 		{
-			name:         "handles ID with space",
-			apiKeyID:     "apikey 456",
-			expectedPath: "/v1/api_key/apikey 456",
+			name:     "handles ID with space",
+			apiKeyID: "apikey 456",
 			request: &UpdateAPIKeyRequest{
 				Name: "Updated API Key",
 			},
@@ -479,9 +472,8 @@ func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 			},
 		},
 		{
-			name:         "handles ID with plus sign",
-			apiKeyID:     "apikey+test",
-			expectedPath: "/v1/api_key/apikey+test",
+			name:     "handles ID with plus sign",
+			apiKeyID: "apikey+test",
 			request: &UpdateAPIKeyRequest{
 				Name: "Updated API Key",
 			},
@@ -491,9 +483,8 @@ func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 			},
 		},
 		{
-			name:         "handles ID with Unicode",
-			apiKeyID:     "キー",
-			expectedPath: "/v1/api_key/キー",
+			name:     "handles ID with Unicode",
+			apiKeyID: "キー",
 			request: &UpdateAPIKeyRequest{
 				Name: "Updated API Key",
 			},
@@ -503,9 +494,8 @@ func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 			},
 		},
 		{
-			name:         "handles ID with ampersand",
-			apiKeyID:     "apikey&test",
-			expectedPath: "/v1/api_key/apikey&test",
+			name:     "handles ID with ampersand",
+			apiKeyID: "apikey&test",
 			request: &UpdateAPIKeyRequest{
 				Name: "Updated API Key",
 			},
@@ -519,8 +509,9 @@ func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != tt.expectedPath {
-					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				expectedEscapedPath := "/v1/api_key/" + url.PathEscape(tt.apiKeyID)
+				if r.URL.EscapedPath() != expectedEscapedPath {
+					t.Errorf("expected escaped path %s, got %s", expectedEscapedPath, r.URL.EscapedPath())
 				}
 				if r.Method != "PATCH" {
 					t.Errorf("expected PATCH method, got %s", r.Method)
@@ -548,42 +539,37 @@ func TestUpdateAPIKey_SpecialCharacters(t *testing.T) {
 
 func TestDeleteAPIKey_SpecialCharacters(t *testing.T) {
 	tests := []struct {
-		name         string
-		apiKeyID     string
-		expectedPath string
+		name     string
+		apiKeyID string
 	}{
 		{
-			name:         "handles ID with slash",
-			apiKeyID:     "apikey/123",
-			expectedPath: "/v1/api_key/apikey/123",
+			name:     "handles ID with slash",
+			apiKeyID: "apikey/123",
 		},
 		{
-			name:         "handles ID with space",
-			apiKeyID:     "apikey 456",
-			expectedPath: "/v1/api_key/apikey 456",
+			name:     "handles ID with space",
+			apiKeyID: "apikey 456",
 		},
 		{
-			name:         "handles ID with plus sign",
-			apiKeyID:     "apikey+test",
-			expectedPath: "/v1/api_key/apikey+test",
+			name:     "handles ID with plus sign",
+			apiKeyID: "apikey+test",
 		},
 		{
-			name:         "handles ID with Unicode",
-			apiKeyID:     "キー",
-			expectedPath: "/v1/api_key/キー",
+			name:     "handles ID with Unicode",
+			apiKeyID: "キー",
 		},
 		{
-			name:         "handles ID with ampersand",
-			apiKeyID:     "apikey&test",
-			expectedPath: "/v1/api_key/apikey&test",
+			name:     "handles ID with ampersand",
+			apiKeyID: "apikey&test",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != tt.expectedPath {
-					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				expectedEscapedPath := "/v1/api_key/" + url.PathEscape(tt.apiKeyID)
+				if r.URL.EscapedPath() != expectedEscapedPath {
+					t.Errorf("expected escaped path %s, got %s", expectedEscapedPath, r.URL.EscapedPath())
 				}
 				if r.Method != "DELETE" {
 					t.Errorf("expected DELETE method, got %s", r.Method)
