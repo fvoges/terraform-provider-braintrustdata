@@ -47,6 +47,10 @@ type ListAPIKeysResponse struct {
 	APIKeys []APIKey `json:"objects"`
 }
 
+func apiKeyPath(id string) string {
+	return "/v1/api_key/" + url.PathEscape(id)
+}
+
 // CreateAPIKey creates a new API key
 func (c *Client) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*APIKey, error) {
 	var apiKey APIKey
@@ -63,7 +67,7 @@ func (c *Client) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
 		return nil, ErrEmptyAPIKeyID
 	}
 	var apiKey APIKey
-	err := c.Do(ctx, "GET", "/v1/api_key/"+url.PathEscape(id), nil, &apiKey)
+	err := c.Do(ctx, "GET", apiKeyPath(id), nil, &apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +80,7 @@ func (c *Client) UpdateAPIKey(ctx context.Context, id string, req *UpdateAPIKeyR
 		return nil, ErrEmptyAPIKeyID
 	}
 	var apiKey APIKey
-	err := c.Do(ctx, "PATCH", "/v1/api_key/"+url.PathEscape(id), req, &apiKey)
+	err := c.Do(ctx, "PATCH", apiKeyPath(id), req, &apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +92,7 @@ func (c *Client) DeleteAPIKey(ctx context.Context, id string) error {
 	if id == "" {
 		return ErrEmptyAPIKeyID
 	}
-	return c.Do(ctx, "DELETE", "/v1/api_key/"+url.PathEscape(id), nil, nil)
+	return c.Do(ctx, "DELETE", apiKeyPath(id), nil, nil)
 }
 
 // ListAPIKeys lists all API keys

@@ -81,7 +81,7 @@ func (d *DatasetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:            true,
 				MarkdownDescription: "Metadata associated with the dataset as key-value pairs.",
 			},
-			},
+		},
 	}
 }
 

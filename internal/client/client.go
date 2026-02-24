@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,23 +28,10 @@ type Client struct {
 }
 
 // NewClient creates a new Braintrust API client
-// baseURL must use https:// or have no scheme (defaults to https)
-// Panics if baseURL uses http:// for security
 func NewClient(apiKey, baseURL, orgID string) *Client {
-	// Enforce HTTPS only
-	if strings.HasPrefix(strings.ToLower(baseURL), "http://") {
-		panic("http:// URLs are not allowed, must use https:// for security")
-	}
-
-	// Add https:// if no scheme provided
-	if !strings.HasPrefix(strings.ToLower(baseURL), "https://") {
+	baseURL = strings.TrimSpace(baseURL)
+	if baseURL != "" && !strings.Contains(baseURL, "://") {
 		baseURL = "https://" + baseURL
-	}
-
-	// Validate it's a proper URL
-	_, err := url.Parse(baseURL)
-	if err != nil {
-		panic(fmt.Sprintf("invalid baseURL: %v", err))
 	}
 
 	// Configure HTTP client with TLS 1.2+ and timeout
@@ -67,6 +55,58 @@ func NewClient(apiKey, baseURL, orgID string) *Client {
 	}
 }
 
+func validateBaseURL(raw string) (*url.URL, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, errors.New("base URL cannot be empty")
+	}
+	baseURL, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid client base URL: %w", err)
+	}
+	if !strings.EqualFold(baseURL.Scheme, "https") {
+		return nil, fmt.Errorf("insecure base URL scheme %q: only https is allowed", baseURL.Scheme)
+	}
+	if baseURL.Host == "" {
+		return nil, errors.New("base URL host cannot be empty")
+	}
+	if baseURL.User != nil {
+		return nil, errors.New("base URL user info is not allowed")
+	}
+	return baseURL, nil
+}
+
+func validateRequestPath(raw string) (*url.URL, error) {
+	pathURL, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid request path: %w", err)
+	}
+	if pathURL.IsAbs() || pathURL.Host != "" || pathURL.Scheme != "" {
+		return nil, fmt.Errorf("absolute request URLs are not allowed: %q", raw)
+	}
+	if pathURL.Fragment != "" {
+		return nil, fmt.Errorf("request path must not contain fragments: %q", raw)
+	}
+	if pathURL.Path == "" {
+		pathURL.Path = "/"
+		pathURL.RawPath = ""
+	}
+	if !strings.HasPrefix(pathURL.Path, "/") {
+		return nil, fmt.Errorf("request path must be rooted (start with '/'): %q", raw)
+	}
+
+	decodedPath, err := url.PathUnescape(pathURL.EscapedPath())
+	if err != nil {
+		return nil, fmt.Errorf("invalid request path encoding: %w", err)
+	}
+	for _, segment := range strings.Split(decodedPath, "/") {
+		if segment == "." || segment == ".." {
+			return nil, fmt.Errorf("request path must not contain dot segments: %q", raw)
+		}
+	}
+
+	return pathURL, nil
+}
+
 // addAuthHeader adds the Bearer token authentication header
 func (c *Client) addAuthHeader(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
@@ -80,8 +120,15 @@ func (c *Client) OrgID() string {
 
 // Do executes an HTTP request with the given method, path, body, and response destination
 func (c *Client) Do(ctx context.Context, method, path string, body, v interface{}) error {
-	// Build URL
-	fullURL := c.baseURL + path
+	baseURL, err := validateBaseURL(c.baseURL)
+	if err != nil {
+		return err
+	}
+	pathURL, err := validateRequestPath(path)
+	if err != nil {
+		return err
+	}
+	fullURL := baseURL.ResolveReference(pathURL).String()
 
 	// Marshal body if provided
 	var bodyReader io.Reader
@@ -106,7 +153,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body, v interface{
 	c.addAuthHeader(req)
 
 	// Execute request
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //nolint:gosec // G704 false positive: baseURL/path are validated above (https + relative path only).
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
