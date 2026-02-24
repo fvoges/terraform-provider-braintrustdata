@@ -6,14 +6,14 @@ description: |-
   Authentication
   The provider requires a Braintrust API key (format: sk-*). You can obtain an API key from your Braintrust organization settings.
   Example Usage
-  
+
   provider "braintrustdata" {
     api_key         = "sk-***"
     organization_id = "org-***"
   }
-  
+
   Alternatively, use environment variables:
-  
+
   export BRAINTRUST_API_KEY="sk-***"
   export BRAINTRUST_ORG_ID="org-***"
 ---

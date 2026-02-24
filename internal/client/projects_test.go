@@ -717,6 +717,7 @@ func TestListProjects_SpecialCharacters(t *testing.T) {
 		})
 	}
 }
+
 // TestGetProject_EmptyID verifies empty ID validation
 func TestGetProject_EmptyID(t *testing.T) {
 	client := NewClient("sk-test", "https://api.example.com", "org-test")
