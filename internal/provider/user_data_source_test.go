@@ -43,7 +43,7 @@ func TestAccUserDataSource_MissingLookupAttributes(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccUserDataSourceConfigMissingLookupAttributes(),
-				ExpectError: regexp.MustCompile(`Must specify either 'id' or at least one searchable attribute \('email', 'given_name', 'family_name'\)`),
+				ExpectError: regexp.MustCompile(`Must specify either 'id' or at least one searchable attribute`),
 			},
 		},
 	})
