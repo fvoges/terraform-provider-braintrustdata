@@ -27,9 +27,11 @@ The module normalizes:
 
 Input validation fails fast when:
 
+- normalized identity keys collide in `user_id_by_identity`
 - `member_identities` are missing in `user_id_by_identity`
 - `member_group_keys` references unknown groups
 - `project_group_bindings` references unknown project/group keys
+- `project_group_bindings` expand to duplicate canonical ACL keys
 
 ## Example
 
@@ -93,26 +95,24 @@ module "access_control" {
 }
 ```
 
-## Plug-in Point for Upcoming User Data Sources
+## Building user_id_by_identity With Data Sources
 
-Today: feed `user_id_by_identity` from an external export.
+The workflow example in `examples/workflows/access-control-data-driven` resolves identities with the new user data sources.
 
-When `braintrustdata_user` / `braintrustdata_users` data sources are available, resolve identity keys before calling this module and pass the resulting map into `user_id_by_identity`.
-
-Example shape:
+Pattern:
 
 ```hcl
-# Pseudo-pattern for future provider data sources.
-# data "braintrustdata_users" "directory" {
-#   emails = local.all_member_identities
-# }
-#
-# locals {
-#   user_id_by_identity = {
-#     for user in data.braintrustdata_users.directory.users :
-#     lower(user.email) => user.id
-#   }
-# }
+data "braintrustdata_user" "member_by_email" {
+  for_each = local.member_identity_emails
+  email    = each.key
+}
+
+locals {
+  user_id_by_identity = {
+    for email, user in data.braintrustdata_user.member_by_email :
+    email => user.id
+  }
+}
 ```
 
 ## Notes

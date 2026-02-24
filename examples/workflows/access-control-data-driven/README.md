@@ -7,6 +7,8 @@ This workflow shows how to drive Braintrust access control from data structures:
 - project permission bindings
 - user/group memberships
 
+It resolves email identities to user IDs using the `braintrustdata_user` data source.
+
 ## Run
 
 ```bash
@@ -19,7 +21,3 @@ Credentials are read from environment variables:
 
 - `BRAINTRUST_API_KEY`
 - `BRAINTRUST_ORG_ID`
-
-## Future User Lookup Integration
-
-When user data sources are available, resolve `local.user_id_by_identity` from data sources and keep the module inputs unchanged.

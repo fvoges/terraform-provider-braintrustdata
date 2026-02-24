@@ -54,11 +54,25 @@ locals {
     ]
   }
 
-  # Current path: supply this map from your upstream identity system export.
+  # This workflow uses email identities and resolves them via braintrustdata_user.
+  member_identity_emails = toset(distinct(flatten([
+    for _, group in local.access_model.groups : [
+      for identity in try(group.member_identities, []) : lower(trimspace(identity))
+      if trimspace(identity) != ""
+    ]
+  ])))
+}
+
+data "braintrustdata_user" "member_by_email" {
+  for_each = local.member_identity_emails
+
+  email = each.key
+}
+
+locals {
   user_id_by_identity = {
-    "alice@example.com" = "user-111"
-    "bob@example.com"   = "user-222"
-    "eve@example.com"   = "user-333"
+    for email, user in data.braintrustdata_user.member_by_email :
+    email => user.id
   }
 }
 
