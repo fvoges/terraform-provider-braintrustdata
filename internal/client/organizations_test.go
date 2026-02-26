@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
 )
@@ -153,24 +154,20 @@ func TestGetOrganization_SpecialCharacters(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		orgID        string
-		expectedPath string
+		name  string
+		orgID string
 	}{
 		{
-			name:         "slash",
-			orgID:        "org/123",
-			expectedPath: "/v1/organization/org/123",
+			name:  "slash",
+			orgID: "org/123",
 		},
 		{
-			name:         "space",
-			orgID:        "org 123",
-			expectedPath: "/v1/organization/org 123",
+			name:  "space",
+			orgID: "org 123",
 		},
 		{
-			name:         "unicode",
-			orgID:        "組織",
-			expectedPath: "/v1/organization/組織",
+			name:  "unicode",
+			orgID: "組織",
 		},
 	}
 
@@ -179,9 +176,10 @@ func TestGetOrganization_SpecialCharacters(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			expectedEscapedPath := "/v1/organization/" + url.PathEscape(tc.orgID)
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != tc.expectedPath {
-					t.Fatalf("path mismatch: got=%q want=%q", r.URL.Path, tc.expectedPath)
+				if r.URL.EscapedPath() != expectedEscapedPath {
+					t.Fatalf("escaped path mismatch: got=%q want=%q", r.URL.EscapedPath(), expectedEscapedPath)
 				}
 				_ = json.NewEncoder(w).Encode(Organization{ID: tc.orgID, Name: "Name"})
 			}))
