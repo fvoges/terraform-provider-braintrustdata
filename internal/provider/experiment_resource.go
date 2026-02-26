@@ -608,16 +608,20 @@ func buildExperimentUpdateRequestWithState(ctx context.Context, data ExperimentR
 }
 
 func isRepoInfoConfigured(value types.Object) bool {
+	// isRepoInfoConfigured reports whether repo_info was explicitly set in config.
 	return !value.IsNull() && !value.IsUnknown()
 }
 
 func applyRepoInfoConfigToUpdateRequest(req *client.UpdateExperimentRequest, repoInfoConfigured bool) {
+	// applyRepoInfoConfigToUpdateRequest omits repo_info when it is not configured.
 	if !repoInfoConfigured {
 		req.RepoInfo = nil
 	}
 }
 
 func shouldPreserveRepoInfoState(repoInfoConfigured bool, repoInfoState repoInfoValueState, apiRepoInfo *client.RepoInfo) bool {
+	// shouldPreserveRepoInfoState keeps prior repo_info for omitted config, and for
+	// configured unknown/null values when the API does not return repo_info.
 	if !repoInfoConfigured {
 		return true
 	}

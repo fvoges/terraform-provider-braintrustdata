@@ -434,6 +434,8 @@ func TestIsRepoInfoConfigured(t *testing.T) {
 func TestShouldPreserveRepoInfoState(t *testing.T) {
 	t.Parallel()
 
+	repoInfoFromAPI := &client.RepoInfo{}
+
 	testCases := []struct {
 		apiRepoInfo        *client.RepoInfo
 		name               string
@@ -456,10 +458,38 @@ func TestShouldPreserveRepoInfoState(t *testing.T) {
 			want:               true,
 		},
 		{
+			name:               "configured_and_null_payload_with_nil_api_repo_info_preserves_state",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateNull,
+			apiRepoInfo:        nil,
+			want:               true,
+		},
+		{
+			name:               "configured_and_unknown_payload_with_api_repo_info_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateUnknown,
+			apiRepoInfo:        repoInfoFromAPI,
+			want:               false,
+		},
+		{
 			name:               "configured_and_known_payload_uses_api_value",
 			repoInfoConfigured: true,
 			repoInfoState:      repoInfoValueStateKnown,
-			apiRepoInfo:        &client.RepoInfo{},
+			apiRepoInfo:        repoInfoFromAPI,
+			want:               false,
+		},
+		{
+			name:               "configured_and_known_payload_with_nil_api_repo_info_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateKnown,
+			apiRepoInfo:        nil,
+			want:               false,
+		},
+		{
+			name:               "configured_and_null_payload_with_api_repo_info_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateNull,
+			apiRepoInfo:        repoInfoFromAPI,
 			want:               false,
 		},
 	}
@@ -481,13 +511,51 @@ func TestApplyRepoInfoConfigToUpdateRequest(t *testing.T) {
 	t.Parallel()
 
 	repoCommit := "abc123"
-	updateReq := &client.UpdateExperimentRequest{
-		RepoInfo: &client.RepoInfo{Commit: &repoCommit},
+	testCases := []struct {
+		name               string
+		repoInfoConfigured bool
+		expectNilRepoInfo  bool
+	}{
+		{
+			name:               "omitted_in_config_removes_repo_info_from_update_request",
+			repoInfoConfigured: false,
+			expectNilRepoInfo:  true,
+		},
+		{
+			name:               "configured_repo_info_is_left_unchanged_on_update_request",
+			repoInfoConfigured: true,
+			expectNilRepoInfo:  false,
+		},
 	}
 
-	applyRepoInfoConfigToUpdateRequest(updateReq, false)
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	if updateReq.RepoInfo != nil {
-		t.Fatalf("expected repo_info to be omitted from update request, got %#v", updateReq.RepoInfo)
+			originalRepoInfo := &client.RepoInfo{Commit: &repoCommit}
+			updateReq := &client.UpdateExperimentRequest{
+				RepoInfo: originalRepoInfo,
+			}
+
+			applyRepoInfoConfigToUpdateRequest(updateReq, tc.repoInfoConfigured)
+
+			if tc.expectNilRepoInfo {
+				if updateReq.RepoInfo != nil {
+					t.Fatalf("expected repo_info to be omitted from update request, got %#v", updateReq.RepoInfo)
+				}
+				return
+			}
+
+			if updateReq.RepoInfo == nil {
+				t.Fatalf("expected repo_info to be preserved on update request, got nil")
+			}
+			if updateReq.RepoInfo != originalRepoInfo {
+				t.Fatalf("expected repo_info pointer to be unchanged; got %p want %p", updateReq.RepoInfo, originalRepoInfo)
+			}
+			if updateReq.RepoInfo.Commit == nil || *updateReq.RepoInfo.Commit != repoCommit {
+				t.Fatalf("expected repo_info.commit to be %q, got %#v", repoCommit, updateReq.RepoInfo.Commit)
+			}
+		})
 	}
 }
