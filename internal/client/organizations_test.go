@@ -215,6 +215,187 @@ func TestOrganization_EmptyID(t *testing.T) {
 	}
 }
 
+func TestListOrganizations(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		options      *ListOrganizationsOptions
+		name         string
+		expectedPath string
+	}{
+		{
+			name:         "without options",
+			options:      nil,
+			expectedPath: "/v1/organization",
+		},
+		{
+			name: "with org name filter",
+			options: &ListOrganizationsOptions{
+				OrgName: "acme",
+			},
+			expectedPath: "/v1/organization?org_name=acme",
+		},
+		{
+			name: "with pagination and limit",
+			options: &ListOrganizationsOptions{
+				OrgName:       "acme",
+				StartingAfter: "org-1",
+				Limit:         10,
+			},
+			expectedPath: "/v1/organization?limit=10&org_name=acme&starting_after=org-1",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotPath := r.URL.Path
+				if r.URL.RawQuery != "" {
+					gotPath += "?" + r.URL.RawQuery
+				}
+				if gotPath != tc.expectedPath {
+					t.Fatalf("request path mismatch: got=%q want=%q", gotPath, tc.expectedPath)
+				}
+
+				_ = json.NewEncoder(w).Encode(ListOrganizationsResponse{
+					Organizations: []Organization{
+						{ID: "org-1", Name: "Acme"},
+						{ID: "org-2", Name: "Beta"},
+					},
+				})
+			}))
+			defer server.Close()
+
+			c := NewClient("sk-test", server.URL, "org-default")
+			c.httpClient = server.Client()
+
+			resp, err := c.ListOrganizations(context.Background(), tc.options)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(resp.Organizations) != 2 {
+				t.Fatalf("organization count mismatch: got=%d", len(resp.Organizations))
+			}
+			if resp.Organizations[0].ID != "org-1" {
+				t.Fatalf("first organization mismatch: %#v", resp.Organizations[0])
+			}
+		})
+	}
+}
+
+func TestListOrganizations_SpecialCharacters(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		options       *ListOrganizationsOptions
+		expectedQuery string
+	}{
+		{
+			name: "org name with spaces and symbols",
+			options: &ListOrganizationsOptions{
+				OrgName: "Acme & Co + Labs",
+			},
+			expectedQuery: "org_name=Acme+%26+Co+%2B+Labs",
+		},
+		{
+			name: "cursor with slash and unicode",
+			options: &ListOrganizationsOptions{
+				StartingAfter: "org/組織",
+			},
+			expectedQuery: "starting_after=org%2F%E7%B5%84%E7%B9%94",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.RawQuery != tc.expectedQuery {
+					t.Fatalf("query mismatch: got=%q want=%q", r.URL.RawQuery, tc.expectedQuery)
+				}
+				_ = json.NewEncoder(w).Encode(ListOrganizationsResponse{})
+			}))
+			defer server.Close()
+
+			c := NewClient("sk-test", server.URL, "org-default")
+			c.httpClient = server.Client()
+
+			_, err := c.ListOrganizations(context.Background(), tc.options)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestListOrganizations_ErrorResponse(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal error"})
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-default")
+	c.httpClient = server.Client()
+
+	_, err := c.ListOrganizations(context.Background(), &ListOrganizationsOptions{OrgName: "acme"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	apiErr := &APIError{}
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *APIError, got %T", err)
+	}
+	if apiErr.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", apiErr.StatusCode)
+	}
+	if apiErr.Message == "" {
+		t.Fatalf("expected error message, got empty: %+v", apiErr)
+	}
+}
+
+func TestListOrganizations_QueryParameterOrder(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotValues, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			t.Fatalf("failed to parse query: %v", err)
+		}
+		expectedValues, err := url.ParseQuery("ending_before=org-0&limit=5&org_name=acme&starting_after=org-1")
+		if err != nil {
+			t.Fatalf("failed to parse expected query: %v", err)
+		}
+		if !reflect.DeepEqual(gotValues, expectedValues) {
+			t.Fatalf("query mismatch: got=%v want=%v", gotValues, expectedValues)
+		}
+		_ = json.NewEncoder(w).Encode(ListOrganizationsResponse{})
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-default")
+	c.httpClient = server.Client()
+
+	_, err := c.ListOrganizations(context.Background(), &ListOrganizationsOptions{
+		OrgName:       "acme",
+		StartingAfter: "org-1",
+		EndingBefore:  "org-0",
+		Limit:         5,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func ptrString(v string) *string {
 	return &v
 }
