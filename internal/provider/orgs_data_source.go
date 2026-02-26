@@ -63,7 +63,6 @@ func (d *OrgsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"limit": schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "Optional max number of organizations to return.",
 			},
 			"starting_after": schema.StringAttribute{
