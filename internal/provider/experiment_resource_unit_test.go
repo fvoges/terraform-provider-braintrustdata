@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -376,5 +377,185 @@ func TestExperimentResourceSchema_RepoInfoGitDiffSensitive(t *testing.T) {
 
 	if !gitDiffStringAttr.IsSensitive() {
 		t.Fatal("expected repo_info.git_diff to be sensitive")
+	}
+}
+
+func TestIsRepoInfoConfigured(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		repoInfo types.Object
+		name     string
+		want     bool
+	}{
+		{
+			name:     "null_is_not_configured",
+			repoInfo: types.ObjectNull(experimentRepoInfoAttributeTypes),
+			want:     false,
+		},
+		{
+			name:     "unknown_is_not_configured",
+			repoInfo: types.ObjectUnknown(experimentRepoInfoAttributeTypes),
+			want:     false,
+		},
+		{
+			name: "known_is_configured",
+			repoInfo: types.ObjectValueMust(
+				experimentRepoInfoAttributeTypes,
+				map[string]attr.Value{
+					"commit":         types.StringValue("abc123"),
+					"branch":         types.StringNull(),
+					"tag":            types.StringNull(),
+					"dirty":          types.BoolNull(),
+					"author_name":    types.StringNull(),
+					"author_email":   types.StringNull(),
+					"commit_message": types.StringNull(),
+					"commit_time":    types.StringNull(),
+					"git_diff":       types.StringNull(),
+				},
+			),
+			want: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := isRepoInfoConfigured(tc.repoInfo)
+			if got != tc.want {
+				t.Fatalf("configured mismatch: got=%v want=%v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestShouldPreserveRepoInfoState(t *testing.T) {
+	t.Parallel()
+
+	repoInfoFromAPI := &client.RepoInfo{}
+
+	testCases := []struct {
+		apiRepoInfo        *client.RepoInfo
+		name               string
+		repoInfoState      repoInfoValueState
+		repoInfoConfigured bool
+		want               bool
+	}{
+		{
+			name:               "omitted_in_config_preserves_state_even_if_api_returns_repo_info",
+			repoInfoConfigured: false,
+			repoInfoState:      repoInfoValueStateKnown,
+			apiRepoInfo:        &client.RepoInfo{},
+			want:               true,
+		},
+		{
+			name:               "configured_and_unknown_payload_with_nil_api_repo_info_preserves_state",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateUnknown,
+			apiRepoInfo:        nil,
+			want:               true,
+		},
+		{
+			name:               "configured_and_null_payload_with_nil_api_repo_info_preserves_state",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateNull,
+			apiRepoInfo:        nil,
+			want:               true,
+		},
+		{
+			name:               "configured_and_unknown_payload_with_api_repo_info_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateUnknown,
+			apiRepoInfo:        repoInfoFromAPI,
+			want:               false,
+		},
+		{
+			name:               "configured_and_known_payload_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateKnown,
+			apiRepoInfo:        repoInfoFromAPI,
+			want:               false,
+		},
+		{
+			name:               "configured_and_known_payload_with_nil_api_repo_info_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateKnown,
+			apiRepoInfo:        nil,
+			want:               false,
+		},
+		{
+			name:               "configured_and_null_payload_with_api_repo_info_uses_api_value",
+			repoInfoConfigured: true,
+			repoInfoState:      repoInfoValueStateNull,
+			apiRepoInfo:        repoInfoFromAPI,
+			want:               false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := shouldPreserveRepoInfoState(tc.repoInfoConfigured, tc.repoInfoState, tc.apiRepoInfo)
+			if got != tc.want {
+				t.Fatalf("preserve decision mismatch: got=%v want=%v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestApplyRepoInfoConfigToUpdateRequest(t *testing.T) {
+	t.Parallel()
+
+	repoCommit := "abc123"
+	testCases := []struct {
+		name               string
+		repoInfoConfigured bool
+		expectNilRepoInfo  bool
+	}{
+		{
+			name:               "omitted_in_config_removes_repo_info_from_update_request",
+			repoInfoConfigured: false,
+			expectNilRepoInfo:  true,
+		},
+		{
+			name:               "configured_repo_info_is_left_unchanged_on_update_request",
+			repoInfoConfigured: true,
+			expectNilRepoInfo:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			originalRepoInfo := &client.RepoInfo{Commit: &repoCommit}
+			updateReq := &client.UpdateExperimentRequest{
+				RepoInfo: originalRepoInfo,
+			}
+
+			applyRepoInfoConfigToUpdateRequest(updateReq, tc.repoInfoConfigured)
+
+			if tc.expectNilRepoInfo {
+				if updateReq.RepoInfo != nil {
+					t.Fatalf("expected repo_info to be omitted from update request, got %#v", updateReq.RepoInfo)
+				}
+				return
+			}
+
+			if updateReq.RepoInfo == nil {
+				t.Fatalf("expected repo_info to be preserved on update request, got nil")
+			}
+			if updateReq.RepoInfo != originalRepoInfo {
+				t.Fatalf("expected repo_info pointer to be unchanged; got %p want %p", updateReq.RepoInfo, originalRepoInfo)
+			}
+			if updateReq.RepoInfo.Commit == nil || *updateReq.RepoInfo.Commit != repoCommit {
+				t.Fatalf("expected repo_info.commit to be %q, got %#v", repoCommit, updateReq.RepoInfo.Commit)
+			}
+		})
 	}
 }
