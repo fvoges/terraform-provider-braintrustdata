@@ -13,22 +13,15 @@ Lists all Braintrust groups in an organization.
 ## Example Usage
 
 ```terraform
-# List all groups in the default organization
-data "braintrustdata_groups" "all" {
-  # org_id defaults to provider configuration
+# List groups in the provider organization.
+data "braintrustdata_groups" "all" {}
+
+# List groups in another organization.
+data "braintrustdata_groups" "other_org" {
+  # replace with real ID or wire from data/resource
+  org_id = "org-456"
 }
 
-# Output all group IDs
-output "all_group_ids" {
-  value = data.braintrustdata_groups.all.ids
-}
-
-# Output all group names
-output "all_group_names" {
-  value = [for g in data.braintrustdata_groups.all.groups : g.name]
-}
-
-# Find a specific group by name using a for expression
 locals {
   engineering_group = [
     for g in data.braintrustdata_groups.all.groups : g
@@ -36,13 +29,12 @@ locals {
   ][0]
 }
 
-output "engineering_group_id" {
-  value = local.engineering_group.id
-}
-
-# List groups in a specific organization
-data "braintrustdata_groups" "other_org" {
-  org_id = "org-456"
+output "group_lists" {
+  value = {
+    all_ids              = data.braintrustdata_groups.all.ids
+    all_names            = [for g in data.braintrustdata_groups.all.groups : g.name]
+    engineering_group_id = local.engineering_group.id
+  }
 }
 ```
 

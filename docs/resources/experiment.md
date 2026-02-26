@@ -13,77 +13,49 @@ Manages a Braintrust experiment. Experiments are collections of runs that test d
 ## Example Usage
 
 ```terraform
-terraform {
-  required_providers {
-    braintrustdata = {
-      source = "braintrustdata/braintrustdata"
-    }
-  }
+resource "braintrustdata_project" "evaluation" {
+  name        = "experiment-example-project"
+  description = "Project for experiment examples"
 }
 
-# Configure the provider with API credentials
-# API key can be set via BRAINTRUST_API_KEY environment variable
-provider "braintrustdata" {
-  # api_key = "sk-***" # Set via BRAINTRUST_API_KEY environment variable
-}
-
-# Create a simple experiment
-resource "braintrustdata_experiment" "simple" {
+# Minimal experiment.
+resource "braintrustdata_experiment" "minimal" {
   name       = "gpt-4-baseline"
-  project_id = "proj-abc123"
+  project_id = braintrustdata_project.evaluation.id
 }
 
-# Create an experiment with description
-resource "braintrustdata_experiment" "with_description" {
+# Practical experiment with metadata, tags, and repository provenance.
+resource "braintrustdata_experiment" "production_candidate" {
   name        = "prompt-optimization-v1"
-  project_id  = "proj-abc123"
-  description = "Testing different prompt variations for customer support responses"
-}
+  project_id  = braintrustdata_project.evaluation.id
+  description = "Candidate prompt tuned for support responses"
+  public      = false
 
-# Create an experiment with metadata and tags
-resource "braintrustdata_experiment" "with_metadata" {
-  name       = "model-comparison"
-  project_id = "proj-abc123"
   metadata = {
-    version     = "1.0"
     model       = "gpt-4"
     temperature = "0.7"
-    dataset     = "customer-support-v2"
+    dataset     = "customer-support-curated"
   }
-  tags = ["production", "customer-support", "gpt-4"]
-}
 
-# Create a public experiment
-resource "braintrustdata_experiment" "public" {
-  name        = "open-research-experiment"
-  project_id  = "proj-abc123"
-  description = "Public experiment for research purposes"
-  public      = true
-  tags        = ["research", "public"]
-}
+  tags = ["customer-support", "production-candidate"]
 
-# Create an experiment with all optional attributes
-resource "braintrustdata_experiment" "complete" {
-  name        = "full-featured-experiment"
-  project_id  = "proj-abc123"
-  description = "Comprehensive experiment with all configuration options"
-  public      = false
-  metadata = {
-    model_family    = "gpt-4"
-    use_case        = "summarization"
-    evaluation_type = "human-preference"
-    cost_per_run    = "0.05"
-  }
-  tags = ["ml-ops", "summarization", "cost-optimized"]
   repo_info = {
+    # replace with real ID or wire from data/resource
     commit         = "abc123def456"
     branch         = "main"
-    tag            = "v1.2.3"
+    tag            = "v1.0.0"
     dirty          = false
     author_name    = "Jane Developer"
     author_email   = "jane@example.com"
-    commit_message = "Tune summarization prompt"
+    commit_message = "Tune support prompt"
     commit_time    = "2026-02-18T12:00:00Z"
+  }
+}
+
+output "experiment_ids" {
+  value = {
+    minimal              = braintrustdata_experiment.minimal.id
+    production_candidate = braintrustdata_experiment.production_candidate.id
   }
 }
 ```

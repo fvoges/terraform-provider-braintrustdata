@@ -1,21 +1,23 @@
-# Create a basic role
-resource "braintrustdata_role" "example" {
-  name        = "custom-admin"
-  description = "Custom administrator role with specific permissions"
+# Base viewer role.
+resource "braintrustdata_role" "viewer" {
+  name        = "example-viewer"
+  description = "Read-only access role"
+
+  member_permissions = ["read"]
 }
 
-# Role with minimal configuration
-resource "braintrustdata_role" "minimal" {
-  name = "viewer-role"
+# Editor role that composes the viewer role and adds write capability.
+resource "braintrustdata_role" "editor" {
+  name        = "example-editor"
+  description = "Read/write access role"
+
+  member_permissions = ["update"]
+  member_roles       = [braintrustdata_role.viewer.id]
 }
 
-# Output role details
-output "role_id" {
-  value       = braintrustdata_role.example.id
-  description = "The ID of the created role"
-}
-
-output "role_org_id" {
-  value       = braintrustdata_role.example.org_id
-  description = "The organization ID of the role"
+output "role_ids" {
+  value = {
+    viewer = braintrustdata_role.viewer.id
+    editor = braintrustdata_role.editor.id
+  }
 }

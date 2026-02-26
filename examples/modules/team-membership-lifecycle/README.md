@@ -39,3 +39,10 @@ This module owns team-group lifecycle and team memberships.
 ## Delimiter contract
 
 `binding_key_delimiter` must match the delimiter expected by `project-access-lifecycle`.
+
+## Typical composition
+
+Use with:
+
+- `examples/workflows/access-control-lifecycle/teams-stack`
+- `examples/workflows/access-control-lifecycle/project-access-stack`
