@@ -49,6 +49,20 @@ func TestBuildListACLsOptions(t *testing.T) {
 			},
 			wantErrLike: "'limit' must be greater than or equal to 1",
 		},
+		"rejects empty object_id": {
+			model: ACLsDataSourceModel{
+				ObjectID:   types.StringValue(""),
+				ObjectType: types.StringValue("project"),
+			},
+			wantErrLike: "'object_id' must be provided and non-empty",
+		},
+		"rejects whitespace object_type": {
+			model: ACLsDataSourceModel{
+				ObjectID:   types.StringValue("project-1"),
+				ObjectType: types.StringValue(" "),
+			},
+			wantErrLike: "'object_type' must be provided and non-empty",
+		},
 	}
 
 	for name, tc := range testCases {

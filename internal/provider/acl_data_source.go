@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -115,19 +117,25 @@ func (d *ACLDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	acl, err := d.client.GetACL(ctx, data.ID.ValueString())
+	aclID, idDiags := validateACLID(data.ID)
+	resp.Diagnostics.Append(idDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	acl, err := d.client.GetACL(ctx, aclID)
 	if err != nil {
 		if client.IsNotFound(err) {
 			resp.Diagnostics.AddError(
 				"ACL Not Found",
-				fmt.Sprintf("No ACL found with ID: %s", data.ID.ValueString()),
+				fmt.Sprintf("No ACL found with ID: %s", aclID),
 			)
 			return
 		}
 
 		resp.Diagnostics.AddError(
 			"Error Reading ACL",
-			fmt.Sprintf("Could not read ACL ID %s: %s", data.ID.ValueString(), err.Error()),
+			fmt.Sprintf("Could not read ACL ID %s: %s", aclID, err.Error()),
 		)
 		return
 	}
@@ -140,49 +148,68 @@ func (d *ACLDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 func populateACLDataSourceModel(data *ACLDataSourceModel, acl *client.ACL) {
 	data.ID = types.StringValue(acl.ID)
 
-	if acl.ObjectOrgID != "" {
-		data.ObjectOrgID = types.StringValue(acl.ObjectOrgID)
-	} else {
-		data.ObjectOrgID = types.StringNull()
+	fields := aclDataSourceFieldsFromACL(acl)
+	data.ObjectOrgID = fields.ObjectOrgID
+	data.ObjectID = fields.ObjectID
+	data.ObjectType = fields.ObjectType
+	data.UserID = fields.UserID
+	data.GroupID = fields.GroupID
+	data.RoleID = fields.RoleID
+	data.Permission = fields.Permission
+	data.RestrictObjectType = fields.RestrictObjectType
+	data.Created = fields.Created
+}
+
+type aclDataSourceFields struct {
+	ObjectOrgID        types.String
+	ObjectID           types.String
+	ObjectType         types.String
+	UserID             types.String
+	GroupID            types.String
+	RoleID             types.String
+	Permission         types.String
+	RestrictObjectType types.String
+	Created            types.String
+}
+
+func aclDataSourceFieldsFromACL(acl *client.ACL) aclDataSourceFields {
+	return aclDataSourceFields{
+		ObjectOrgID:        stringOrNull(acl.ObjectOrgID),
+		ObjectID:           stringOrNull(acl.ObjectID),
+		ObjectType:         stringOrNull(string(acl.ObjectType)),
+		UserID:             stringOrNull(acl.UserID),
+		GroupID:            stringOrNull(acl.GroupID),
+		RoleID:             stringOrNull(acl.RoleID),
+		Permission:         stringOrNull(string(acl.Permission)),
+		RestrictObjectType: stringOrNull(string(acl.RestrictObjectType)),
+		Created:            stringOrNull(acl.Created),
 	}
-	if acl.ObjectID != "" {
-		data.ObjectID = types.StringValue(acl.ObjectID)
-	} else {
-		data.ObjectID = types.StringNull()
+}
+
+func stringOrNull(v string) types.String {
+	if v == "" {
+		return types.StringNull()
 	}
-	if acl.ObjectType != "" {
-		data.ObjectType = types.StringValue(string(acl.ObjectType))
-	} else {
-		data.ObjectType = types.StringNull()
+	return types.StringValue(v)
+}
+
+func validateACLID(id types.String) (string, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if id.IsUnknown() {
+		diags.AddError(
+			"Invalid ACL ID",
+			"ACL ID is unknown. Ensure the ID is set before reading this data source.",
+		)
+		return "", diags
 	}
-	if acl.UserID != "" {
-		data.UserID = types.StringValue(acl.UserID)
-	} else {
-		data.UserID = types.StringNull()
+
+	if id.IsNull() || strings.TrimSpace(id.ValueString()) == "" {
+		diags.AddError(
+			"Invalid ACL ID",
+			"ACL ID must be provided and non-empty when reading this ACL data source.",
+		)
+		return "", diags
 	}
-	if acl.GroupID != "" {
-		data.GroupID = types.StringValue(acl.GroupID)
-	} else {
-		data.GroupID = types.StringNull()
-	}
-	if acl.RoleID != "" {
-		data.RoleID = types.StringValue(acl.RoleID)
-	} else {
-		data.RoleID = types.StringNull()
-	}
-	if acl.Permission != "" {
-		data.Permission = types.StringValue(string(acl.Permission))
-	} else {
-		data.Permission = types.StringNull()
-	}
-	if acl.RestrictObjectType != "" {
-		data.RestrictObjectType = types.StringValue(string(acl.RestrictObjectType))
-	} else {
-		data.RestrictObjectType = types.StringNull()
-	}
-	if acl.Created != "" {
-		data.Created = types.StringValue(acl.Created)
-	} else {
-		data.Created = types.StringNull()
-	}
+
+	return id.ValueString(), diags
 }

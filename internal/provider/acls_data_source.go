@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -217,9 +218,21 @@ func buildListACLsOptions(data ACLsDataSourceModel) (*client.ListACLsOptions, di
 		return nil, diags
 	}
 
+	objectID := strings.TrimSpace(data.ObjectID.ValueString())
+	if objectID == "" {
+		diags.AddError("Invalid object_id", "'object_id' must be provided and non-empty.")
+		return nil, diags
+	}
+
+	objectTypeValue := strings.TrimSpace(data.ObjectType.ValueString())
+	if objectTypeValue == "" {
+		diags.AddError("Invalid object_type", "'object_type' must be provided and non-empty.")
+		return nil, diags
+	}
+
 	listOpts := &client.ListACLsOptions{
-		ObjectID:   data.ObjectID.ValueString(),
-		ObjectType: client.ACLObjectType(data.ObjectType.ValueString()),
+		ObjectID:   objectID,
+		ObjectType: client.ACLObjectType(objectTypeValue),
 	}
 
 	if !data.Limit.IsNull() {
@@ -252,51 +265,16 @@ func aclsDataSourceACLFromACL(acl *client.ACL) ACLsDataSourceACL {
 		ID: types.StringValue(acl.ID),
 	}
 
-	if acl.ObjectOrgID != "" {
-		aclModel.ObjectOrgID = types.StringValue(acl.ObjectOrgID)
-	} else {
-		aclModel.ObjectOrgID = types.StringNull()
-	}
-	if acl.ObjectID != "" {
-		aclModel.ObjectID = types.StringValue(acl.ObjectID)
-	} else {
-		aclModel.ObjectID = types.StringNull()
-	}
-	if acl.ObjectType != "" {
-		aclModel.ObjectType = types.StringValue(string(acl.ObjectType))
-	} else {
-		aclModel.ObjectType = types.StringNull()
-	}
-	if acl.UserID != "" {
-		aclModel.UserID = types.StringValue(acl.UserID)
-	} else {
-		aclModel.UserID = types.StringNull()
-	}
-	if acl.GroupID != "" {
-		aclModel.GroupID = types.StringValue(acl.GroupID)
-	} else {
-		aclModel.GroupID = types.StringNull()
-	}
-	if acl.RoleID != "" {
-		aclModel.RoleID = types.StringValue(acl.RoleID)
-	} else {
-		aclModel.RoleID = types.StringNull()
-	}
-	if acl.Permission != "" {
-		aclModel.Permission = types.StringValue(string(acl.Permission))
-	} else {
-		aclModel.Permission = types.StringNull()
-	}
-	if acl.RestrictObjectType != "" {
-		aclModel.RestrictObjectType = types.StringValue(string(acl.RestrictObjectType))
-	} else {
-		aclModel.RestrictObjectType = types.StringNull()
-	}
-	if acl.Created != "" {
-		aclModel.Created = types.StringValue(acl.Created)
-	} else {
-		aclModel.Created = types.StringNull()
-	}
+	fields := aclDataSourceFieldsFromACL(acl)
+	aclModel.ObjectOrgID = fields.ObjectOrgID
+	aclModel.ObjectID = fields.ObjectID
+	aclModel.ObjectType = fields.ObjectType
+	aclModel.UserID = fields.UserID
+	aclModel.GroupID = fields.GroupID
+	aclModel.RoleID = fields.RoleID
+	aclModel.Permission = fields.Permission
+	aclModel.RestrictObjectType = fields.RestrictObjectType
+	aclModel.Created = fields.Created
 
 	return aclModel
 }

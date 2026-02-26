@@ -1,9 +1,11 @@
 package provider
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestPopulateACLDataSourceModel(t *testing.T) {
@@ -89,5 +91,74 @@ func TestPopulateACLDataSourceModel_Nullables(t *testing.T) {
 	}
 	if !model.Created.IsNull() {
 		t.Fatalf("expected created to be null")
+	}
+}
+
+func TestValidateACLID(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		id          types.String
+		wantID      string
+		wantErrLike string
+	}{
+		{
+			name:   "valid",
+			id:     types.StringValue("acl-1"),
+			wantID: "acl-1",
+		},
+		{
+			name:        "unknown",
+			id:          types.StringUnknown(),
+			wantErrLike: "ACL ID is unknown",
+		},
+		{
+			name:        "null",
+			id:          types.StringNull(),
+			wantErrLike: "ACL ID must be provided and non-empty",
+		},
+		{
+			name:        "empty",
+			id:          types.StringValue(""),
+			wantErrLike: "ACL ID must be provided and non-empty",
+		},
+		{
+			name:        "whitespace",
+			id:          types.StringValue("   "),
+			wantErrLike: "ACL ID must be provided and non-empty",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			gotID, diags := validateACLID(tc.id)
+			if tc.wantErrLike == "" {
+				if diags.HasError() {
+					t.Fatalf("unexpected diagnostics: %v", diags)
+				}
+				if gotID != tc.wantID {
+					t.Fatalf("id mismatch: got=%q want=%q", gotID, tc.wantID)
+				}
+				return
+			}
+
+			if !diags.HasError() {
+				t.Fatalf("expected diagnostic containing %q, got none", tc.wantErrLike)
+			}
+			found := false
+			for _, d := range diags {
+				if strings.Contains(d.Detail(), tc.wantErrLike) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("expected diagnostic containing %q, got %v", tc.wantErrLike, diags)
+			}
+		})
 	}
 }
