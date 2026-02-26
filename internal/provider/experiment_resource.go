@@ -449,9 +449,11 @@ func (r *ExperimentResource) Read(ctx context.Context, req resource.ReadRequest,
 func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data ExperimentResourceModel
 	var state ExperimentResourceModel
+	var config ExperimentResourceModel
 
 	// Get current state to preserve fields not returned by update API
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -474,11 +476,14 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	repoInfoConfigured := isRepoInfoConfigured(config.RepoInfo)
+
 	updateReq, repoInfoState, reqDiags := buildExperimentUpdateRequestWithState(ctx, data)
 	resp.Diagnostics.Append(reqDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	applyRepoInfoConfigToUpdateRequest(updateReq, repoInfoConfigured)
 
 	// Update experiment via API
 	experiment, err := r.client.UpdateExperiment(ctx, data.ID.ValueString(), updateReq)
@@ -502,9 +507,7 @@ func (r *ExperimentResource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// If repo_info was omitted from update payload and API omitted it in response,
-	// keep prior state to avoid implicit clears.
-	if repoInfoState != repoInfoValueStateKnown && experiment.RepoInfo == nil {
+	if shouldPreserveRepoInfoState(repoInfoConfigured, repoInfoState, experiment.RepoInfo) {
 		data.RepoInfo = state.RepoInfo
 	} else {
 		data.RepoInfo = repoInfoValue
@@ -602,6 +605,24 @@ func buildExperimentUpdateRequestWithState(ctx context.Context, data ExperimentR
 	}
 
 	return req, repoInfoState, diags
+}
+
+func isRepoInfoConfigured(value types.Object) bool {
+	return !value.IsNull() && !value.IsUnknown()
+}
+
+func applyRepoInfoConfigToUpdateRequest(req *client.UpdateExperimentRequest, repoInfoConfigured bool) {
+	if !repoInfoConfigured {
+		req.RepoInfo = nil
+	}
+}
+
+func shouldPreserveRepoInfoState(repoInfoConfigured bool, repoInfoState repoInfoValueState, apiRepoInfo *client.RepoInfo) bool {
+	if !repoInfoConfigured {
+		return true
+	}
+
+	return repoInfoState != repoInfoValueStateKnown && apiRepoInfo == nil
 }
 
 func objectToRepoInfoWithState(ctx context.Context, value types.Object) (*client.RepoInfo, repoInfoValueState, diag.Diagnostics) {
