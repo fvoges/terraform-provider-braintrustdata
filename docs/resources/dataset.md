@@ -74,5 +74,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Datasets can be imported using their ID
-terraform import braintrustdata_dataset.example dataset-id-here
+terraform import braintrustdata_dataset.minimal dataset-id-here
 ```

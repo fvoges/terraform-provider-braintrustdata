@@ -34,8 +34,8 @@ output "dataset_lookup" {
       description = data.braintrustdata_dataset.by_id.description
     }
     by_name = {
-      id      = data.braintrustdata_dataset.by_name.id
-      created = data.braintrustdata_dataset.by_name.created
+      id       = data.braintrustdata_dataset.by_name.id
+      created  = data.braintrustdata_dataset.by_name.created
       metadata = data.braintrustdata_dataset.by_name.metadata
     }
   }

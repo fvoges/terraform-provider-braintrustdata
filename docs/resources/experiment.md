@@ -106,5 +106,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Experiments can be imported using their ID
-terraform import braintrustdata_experiment.example experiment-id-here
+terraform import braintrustdata_experiment.minimal experiment-id-here
 ```
