@@ -31,6 +31,9 @@ func TestCreateExperiment(t *testing.T) {
 		if req.ProjectID == "" {
 			t.Error("expected project_id to be set")
 		}
+		if req.RepoInfo == nil {
+			t.Error("expected repo_info to be set")
+		}
 
 		// Handle Public pointer
 		public := false
@@ -46,6 +49,7 @@ func TestCreateExperiment(t *testing.T) {
 			Public:      public,
 			Metadata:    req.Metadata,
 			Tags:        req.Tags,
+			RepoInfo:    req.RepoInfo,
 			Created:     time.Now().Format(time.RFC3339),
 			UserID:      "user-123",
 			OrgID:       "org-test",
@@ -63,6 +67,13 @@ func TestCreateExperiment(t *testing.T) {
 		"framework": "pytorch",
 		"version":   "2.0",
 	}
+	repoInfo := &RepoInfo{
+		Commit:        stringPtr("abc123"),
+		Branch:        stringPtr("main"),
+		AuthorName:    stringPtr("Jane Doe"),
+		AuthorEmail:   stringPtr("jane@example.com"),
+		CommitMessage: stringPtr("test commit"),
+	}
 
 	publicTrue := true
 	experiment, err := client.CreateExperiment(context.Background(), &CreateExperimentRequest{
@@ -72,6 +83,7 @@ func TestCreateExperiment(t *testing.T) {
 		Public:      &publicTrue,
 		Metadata:    metadata,
 		Tags:        []string{"ml", "test"},
+		RepoInfo:    repoInfo,
 	})
 
 	if err != nil {
@@ -92,6 +104,12 @@ func TestCreateExperiment(t *testing.T) {
 	}
 	if len(experiment.Tags) != 2 {
 		t.Errorf("expected 2 tags, got %d", len(experiment.Tags))
+	}
+	if experiment.RepoInfo == nil {
+		t.Fatal("expected repo_info to be present")
+	}
+	if got := derefString(experiment.RepoInfo.Commit); got != "abc123" {
+		t.Errorf("expected repo_info.commit 'abc123', got %q", got)
 	}
 }
 
@@ -207,6 +225,7 @@ func TestUpdateExperiment(t *testing.T) {
 			Public:      public,
 			Metadata:    metadata,
 			Tags:        req.Tags,
+			RepoInfo:    req.RepoInfo,
 			Created:     time.Now().Format(time.RFC3339),
 			UserID:      "user-123",
 			OrgID:       "org-test",
@@ -224,12 +243,20 @@ func TestUpdateExperiment(t *testing.T) {
 	metadata := map[string]interface{}{
 		"updated": true,
 	}
+	repoInfo := &RepoInfo{
+		Commit:        stringPtr("def456"),
+		Branch:        stringPtr("feature/repo-info"),
+		Dirty:         boolPtr(true),
+		CommitTime:    stringPtr("2026-02-18T12:00:00Z"),
+		CommitMessage: stringPtr("update"),
+	}
 	experiment, err := client.UpdateExperiment(context.Background(), "experiment-123", &UpdateExperimentRequest{
 		Name:        "Updated Experiment",
 		Description: "Updated description",
 		Public:      &publicFalse,
 		Metadata:    metadata,
 		Tags:        []string{"updated"},
+		RepoInfo:    repoInfo,
 	})
 
 	if err != nil {
@@ -245,6 +272,27 @@ func TestUpdateExperiment(t *testing.T) {
 	if len(experiment.Tags) != 1 {
 		t.Errorf("expected 1 tag, got %d", len(experiment.Tags))
 	}
+	if experiment.RepoInfo == nil {
+		t.Fatal("expected repo_info to be present")
+	}
+	if got := derefString(experiment.RepoInfo.Branch); got != "feature/repo-info" {
+		t.Errorf("expected repo_info.branch 'feature/repo-info', got %q", got)
+	}
+}
+
+func stringPtr(v string) *string {
+	return &v
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+func derefString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
 }
 
 // TestDeleteExperiment verifies experiment deletion

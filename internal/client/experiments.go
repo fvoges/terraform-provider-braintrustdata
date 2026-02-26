@@ -18,6 +18,7 @@ func experimentPath(id string) string {
 // Experiment represents a Braintrust experiment
 type Experiment struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	RepoInfo    *RepoInfo              `json:"repo_info,omitempty"`
 	ID          string                 `json:"id"`
 	ProjectID   string                 `json:"project_id"`
 	Name        string                 `json:"name"`
@@ -30,9 +31,23 @@ type Experiment struct {
 	Public      bool                   `json:"public"`
 }
 
+// RepoInfo represents Git repository metadata attached to an experiment.
+type RepoInfo struct {
+	Commit        *string `json:"commit,omitempty"`
+	Branch        *string `json:"branch,omitempty"`
+	Tag           *string `json:"tag,omitempty"`
+	Dirty         *bool   `json:"dirty,omitempty"`
+	AuthorName    *string `json:"author_name,omitempty"`
+	AuthorEmail   *string `json:"author_email,omitempty"`
+	CommitMessage *string `json:"commit_message,omitempty"`
+	CommitTime    *string `json:"commit_time,omitempty"`
+	GitDiff       *string `json:"git_diff,omitempty"`
+}
+
 // CreateExperimentRequest represents a request to create an experiment
 type CreateExperimentRequest struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	RepoInfo    *RepoInfo              `json:"repo_info,omitempty"`
 	Public      *bool                  `json:"public,omitempty"`
 	ProjectID   string                 `json:"project_id"`
 	Name        string                 `json:"name"`
@@ -44,6 +59,7 @@ type CreateExperimentRequest struct {
 type UpdateExperimentRequest struct {
 	Name        string                 `json:"name,omitempty"`
 	Description string                 `json:"description,omitempty"`
+	RepoInfo    *RepoInfo              `json:"repo_info,omitempty"`
 	Public      *bool                  `json:"public,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 	Tags        []string               `json:"tags,omitempty"`

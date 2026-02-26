@@ -75,6 +75,16 @@ resource "braintrustdata_experiment" "complete" {
     cost_per_run    = "0.05"
   }
   tags = ["ml-ops", "summarization", "cost-optimized"]
+  repo_info = {
+    commit         = "abc123def456"
+    branch         = "main"
+    tag            = "v1.2.3"
+    dirty          = false
+    author_name    = "Jane Developer"
+    author_email   = "jane@example.com"
+    commit_message = "Tune summarization prompt"
+    commit_time    = "2026-02-18T12:00:00Z"
+  }
 }
 ```
 
@@ -91,6 +101,7 @@ resource "braintrustdata_experiment" "complete" {
 - `description` (String) A description of the experiment.
 - `metadata` (Map of String) Metadata associated with the experiment as key-value pairs.
 - `public` (Boolean) Whether the experiment is publicly accessible. Defaults to false.
+- `repo_info` (Attributes) Git repository metadata snapshot associated with the experiment. (see [below for nested schema](#nestedatt--repo_info))
 - `tags` (Set of String) Tags associated with the experiment.
 
 ### Read-Only
@@ -99,6 +110,21 @@ resource "braintrustdata_experiment" "complete" {
 - `id` (String) The unique identifier of the experiment.
 - `org_id` (String) The ID of the organization this experiment belongs to.
 - `user_id` (String) The ID of the user who created the experiment.
+
+<a id="nestedatt--repo_info"></a>
+### Nested Schema for `repo_info`
+
+Optional:
+
+- `author_email` (String) Author email of the most recent commit.
+- `author_name` (String) Author name of the most recent commit.
+- `branch` (String) Branch name of the most recent commit.
+- `commit` (String) SHA of the most recent commit.
+- `commit_message` (String) Most recent commit message.
+- `commit_time` (String) Time of the most recent commit.
+- `dirty` (Boolean) Whether the repository had uncommitted changes.
+- `git_diff` (String, Sensitive) Diff against the most recent commit when the repo was dirty.
+- `tag` (String) Tag name on the most recent commit.
 
 ## Import
 
