@@ -22,10 +22,12 @@ This module owns team-group lifecycle and team memberships.
 - `org_name_for_user_lookup`
 - `identity_case_insensitive`
 - `team_group_name_prefix`
+- `binding_key_delimiter`
 
 ## Output contract
 
 - `team_group_ids_by_key`
+- `binding_key_delimiter`
 - `role_group_member_group_ids_by_binding_key` (`project_key|role_key` => set(team_group_ids))
 
 ## Identity resolution order
@@ -33,3 +35,7 @@ This module owns team-group lifecycle and team memberships.
 1. `user_id_by_identity`
 2. `data.braintrustdata_user` lookup by email (if enabled)
 3. fail when unresolved and lookup disabled
+
+## Delimiter contract
+
+`binding_key_delimiter` must match the delimiter expected by `project-access-lifecycle`.

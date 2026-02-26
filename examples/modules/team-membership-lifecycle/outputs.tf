@@ -6,6 +6,11 @@ output "team_group_ids_by_key" {
   }
 }
 
+output "binding_key_delimiter" {
+  description = "Delimiter used when forming role_group_member_group_ids_by_binding_key."
+  value       = var.binding_key_delimiter
+}
+
 output "role_group_member_group_ids_by_binding_key" {
   description = "Map of binding key project_key|role_key to team group IDs."
   value = {

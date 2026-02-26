@@ -24,7 +24,10 @@ This module owns project lifecycle and project-scoped access roles.
 - `role_group_ids_by_binding_key`
 - `role_group_names_by_binding_key`
 
+## Delimiter contract
+
+Binding keys are `project_key|role_key` and `binding_key_delimiter` is constrained to `|` to remain compatible with `team-membership-lifecycle` outputs.
+
 ## Notes
 
-- Binding key format is `project_key|role_key` by default.
 - This module is the sole writer of project role groups and their `member_groups`.

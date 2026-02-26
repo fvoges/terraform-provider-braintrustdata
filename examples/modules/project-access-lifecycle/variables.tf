@@ -11,13 +11,18 @@ variable "role_group_name_prefix" {
 }
 
 variable "binding_key_delimiter" {
-  description = "Delimiter used in binding keys."
+  description = "Delimiter used in binding keys. Must match team-membership-lifecycle output delimiter."
   type        = string
   default     = "|"
 
   validation {
     condition     = trimspace(var.binding_key_delimiter) != ""
     error_message = "binding_key_delimiter must not be empty."
+  }
+
+  validation {
+    condition     = var.binding_key_delimiter == "|"
+    error_message = "binding_key_delimiter must be \"|\" to remain compatible with team-membership-lifecycle."
   }
 }
 

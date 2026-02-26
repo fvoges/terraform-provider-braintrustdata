@@ -10,6 +10,22 @@ variable "team_group_name_prefix" {
   default     = ""
 }
 
+variable "binding_key_delimiter" {
+  description = "Delimiter used in output binding keys. Must match project-access-lifecycle delimiter."
+  type        = string
+  default     = "|"
+
+  validation {
+    condition     = trimspace(var.binding_key_delimiter) != ""
+    error_message = "binding_key_delimiter must not be empty."
+  }
+
+  validation {
+    condition     = var.binding_key_delimiter == "|"
+    error_message = "binding_key_delimiter must be \"|\" to remain compatible with project-access-lifecycle."
+  }
+}
+
 variable "resolve_identities_with_data_source" {
   description = "When true, resolve missing identities via data.braintrustdata_user lookup by email."
   type        = bool

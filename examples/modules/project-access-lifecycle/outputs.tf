@@ -7,7 +7,7 @@ output "project_ids_by_key" {
 }
 
 output "role_group_ids_by_binding_key" {
-  description = "Role-group IDs keyed by binding key project_key|role_key."
+  description = "Role-group IDs keyed by binding key project_key<delimiter>role_key (delimiter is binding_key_delimiter, default '|')."
   value = {
     for binding_key, group in braintrustdata_group.role_groups :
     binding_key => group.id
@@ -15,7 +15,7 @@ output "role_group_ids_by_binding_key" {
 }
 
 output "role_group_names_by_binding_key" {
-  description = "Role-group names keyed by binding key project_key|role_key."
+  description = "Role-group names keyed by binding key project_key<delimiter>role_key (delimiter is binding_key_delimiter, default '|')."
   value = {
     for binding_key, group in braintrustdata_group.role_groups :
     binding_key => group.name

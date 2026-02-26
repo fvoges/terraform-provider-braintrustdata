@@ -34,7 +34,7 @@ locals {
       ])))
       project_role_bindings = values({
         for binding in tolist(try(team.project_role_bindings, [])) :
-        "${trimspace(binding.project_key)}|${trimspace(binding.role_key)}" => {
+        "${trimspace(binding.project_key)}${var.binding_key_delimiter}${trimspace(binding.role_key)}" => {
           project_key = trimspace(binding.project_key)
           role_key    = trimspace(binding.role_key)
         }
@@ -66,10 +66,10 @@ locals {
           team_key    = team_key
           project_key = binding.project_key
           role_key    = binding.role_key
-          binding_key = "${binding.project_key}|${binding.role_key}"
+          binding_key = "${binding.project_key}${var.binding_key_delimiter}${binding.role_key}"
         }
       ]
     ]) :
-    "${pair.team_key}|${pair.binding_key}" => pair
+    "${pair.team_key}${var.binding_key_delimiter}${pair.binding_key}" => pair
   })
 }

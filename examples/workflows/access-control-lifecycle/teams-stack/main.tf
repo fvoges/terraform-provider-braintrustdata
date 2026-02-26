@@ -5,6 +5,8 @@ provider "braintrustdata" {
 }
 
 locals {
+  binding_key_delimiter = "|"
+
   teams = {
     ml_team = {
       name              = "ml-team"
@@ -34,11 +36,16 @@ module "teams" {
 
   identity_case_insensitive           = true
   team_group_name_prefix              = "team-"
+  binding_key_delimiter               = local.binding_key_delimiter
   resolve_identities_with_data_source = true
 }
 
 output "team_group_ids_by_key" {
   value = module.teams.team_group_ids_by_key
+}
+
+output "binding_key_delimiter" {
+  value = module.teams.binding_key_delimiter
 }
 
 output "role_group_member_group_ids_by_binding_key" {
