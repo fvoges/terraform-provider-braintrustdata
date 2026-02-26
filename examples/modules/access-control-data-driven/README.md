@@ -120,3 +120,4 @@ locals {
 - Keep `project` and `group` map keys stable; rename using `name` fields when needed.
 - Avoid circular `member_group_keys` relationships.
 - ACL entries are immutable in Braintrust; permission changes create replacement ACL resources.
+- For lifecycle ownership at scale, prefer the split modules in `examples/modules/project-access-lifecycle` and `examples/modules/team-membership-lifecycle` with the split-state workflow under `examples/workflows/access-control-lifecycle`.
