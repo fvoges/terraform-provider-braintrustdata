@@ -282,6 +282,71 @@ func TestExperimentResourceSchema_RepoInfoUseStateForUnknown(t *testing.T) {
 	}
 }
 
+func TestExperimentResourceSchema_RepoInfoNestedAttributesOptionalComputed(t *testing.T) {
+	t.Parallel()
+
+	r := NewExperimentResource().(*ExperimentResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	repoInfoAttr, ok := schemaResp.Schema.Attributes["repo_info"]
+	if !ok {
+		t.Fatal("expected repo_info attribute in schema")
+	}
+
+	nestedAttr, ok := repoInfoAttr.(schema.SingleNestedAttribute)
+	if !ok {
+		t.Fatalf("expected repo_info to be schema.SingleNestedAttribute, got %T", repoInfoAttr)
+	}
+
+	testCases := []struct {
+		name   string
+		isBool bool
+	}{
+		{name: "commit"},
+		{name: "branch"},
+		{name: "tag"},
+		{name: "dirty", isBool: true},
+		{name: "author_name"},
+		{name: "author_email"},
+		{name: "commit_message"},
+		{name: "commit_time"},
+		{name: "git_diff"},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			attrValue, ok := nestedAttr.Attributes[tc.name]
+			if !ok {
+				t.Fatalf("expected %q attribute in repo_info schema", tc.name)
+			}
+
+			if tc.isBool {
+				boolAttr, ok := attrValue.(schema.BoolAttribute)
+				if !ok {
+					t.Fatalf("expected %q to be schema.BoolAttribute, got %T", tc.name, attrValue)
+				}
+				if !boolAttr.IsOptional() || !boolAttr.IsComputed() {
+					t.Fatalf("expected %q to be optional+computed", tc.name)
+				}
+
+				return
+			}
+
+			stringAttr, ok := attrValue.(schema.StringAttribute)
+			if !ok {
+				t.Fatalf("expected %q to be schema.StringAttribute, got %T", tc.name, attrValue)
+			}
+			if !stringAttr.IsOptional() || !stringAttr.IsComputed() {
+				t.Fatalf("expected %q to be optional+computed", tc.name)
+			}
+		})
+	}
+}
+
 func TestExperimentResourceSchema_RepoInfoGitDiffSensitive(t *testing.T) {
 	t.Parallel()
 

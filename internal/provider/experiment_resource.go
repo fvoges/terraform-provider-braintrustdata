@@ -134,18 +134,22 @@ func (r *ExperimentResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Attributes: map[string]schema.Attribute{
 					"commit": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "SHA of the most recent commit.",
 					},
 					"branch": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Branch name of the most recent commit.",
 					},
 					"tag": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Tag name on the most recent commit.",
 					},
 					"dirty": schema.BoolAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Whether the repository had uncommitted changes.",
 						PlanModifiers: []planmodifier.Bool{
 							boolplanmodifier.UseStateForUnknown(),
@@ -153,22 +157,27 @@ func (r *ExperimentResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					},
 					"author_name": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Author name of the most recent commit.",
 					},
 					"author_email": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Author email of the most recent commit.",
 					},
 					"commit_message": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Most recent commit message.",
 					},
 					"commit_time": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: "Time of the most recent commit.",
 					},
 					"git_diff": schema.StringAttribute{
 						Optional:            true,
+						Computed:            true,
 						Sensitive:           true,
 						MarkdownDescription: "Diff against the most recent commit when the repo was dirty.",
 					},
