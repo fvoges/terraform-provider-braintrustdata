@@ -36,7 +36,7 @@ generate:
 		echo "Installing tfplugindocs..."; \
 		go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest; \
 	fi
-	tfplugindocs generate
+	tfplugindocs generate --provider-name braintrustdata --rendered-provider-name terraform-provider-braintrustdata
 
 # Install pre-commit hooks
 pre-commit-install:
