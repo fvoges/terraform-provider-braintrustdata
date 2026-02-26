@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 )
 
@@ -33,6 +34,19 @@ type PatchOrganizationRequest struct {
 	ImageRenderingMode *string `json:"image_rendering_mode,omitempty"`
 }
 
+// ListOrganizationsOptions represents options for listing organizations.
+type ListOrganizationsOptions struct {
+	OrgName       string
+	StartingAfter string
+	EndingBefore  string
+	Limit         int
+}
+
+// ListOrganizationsResponse represents a list of organizations.
+type ListOrganizationsResponse struct {
+	Organizations []Organization `json:"objects"`
+}
+
 // GetOrganization retrieves an organization by ID.
 func (c *Client) GetOrganization(ctx context.Context, id string) (*Organization, error) {
 	if id == "" {
@@ -59,4 +73,37 @@ func (c *Client) UpdateOrganization(ctx context.Context, id string, req *PatchOr
 	}
 
 	return &org, nil
+}
+
+// ListOrganizations lists organizations using API-native filters.
+func (c *Client) ListOrganizations(ctx context.Context, opts *ListOrganizationsOptions) (*ListOrganizationsResponse, error) {
+	path := "/v1/organization"
+
+	if opts != nil {
+		params := url.Values{}
+
+		if opts.OrgName != "" {
+			params.Set("org_name", opts.OrgName)
+		}
+		if opts.Limit > 0 {
+			params.Set("limit", fmt.Sprintf("%d", opts.Limit))
+		}
+		if opts.StartingAfter != "" {
+			params.Set("starting_after", opts.StartingAfter)
+		}
+		if opts.EndingBefore != "" {
+			params.Set("ending_before", opts.EndingBefore)
+		}
+
+		if encoded := params.Encode(); encoded != "" {
+			path += "?" + encoded
+		}
+	}
+
+	var result ListOrganizationsResponse
+	if err := c.Do(ctx, "GET", path, nil, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
