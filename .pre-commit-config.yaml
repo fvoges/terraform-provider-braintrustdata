@@ -54,6 +54,13 @@ repos:
         files: \.tf$
         pass_filenames: false
 
+      - id: examples-lint
+        name: examples integrity checks
+        entry: bash scripts/check-examples.sh
+        language: system
+        files: (examples/.*|docs/.*|scripts/check-examples\.sh|GNUmakefile)$
+        pass_filenames: false
+
       - id: generate-docs
         name: generate docs
         entry: "bash -c 'command -v tfplugindocs >/dev/null 2>&1 && make generate || echo \"tfplugindocs not installed, skipping (install with: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest)\"'"

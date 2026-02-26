@@ -13,55 +13,35 @@ Manages a Braintrust dataset. Datasets are collections of examples used for test
 ## Example Usage
 
 ```terraform
-terraform {
-  required_providers {
-    braintrustdata = {
-      source = "braintrustdata/braintrustdata"
-    }
-  }
+resource "braintrustdata_project" "evaluation" {
+  name        = "dataset-example-project"
+  description = "Project for dataset examples"
 }
 
-# Configure the provider with API credentials
-# API key can be set via BRAINTRUST_API_KEY environment variable
-provider "braintrustdata" {
-  # api_key = "sk-***" # Set via BRAINTRUST_API_KEY environment variable
-}
-
-# Create a simple dataset
-resource "braintrustdata_dataset" "simple" {
+# Minimal dataset.
+resource "braintrustdata_dataset" "minimal" {
   name       = "customer-support-v1"
-  project_id = "proj-abc123"
+  project_id = braintrustdata_project.evaluation.id
 }
 
-# Create a dataset with description
-resource "braintrustdata_dataset" "with_description" {
-  name        = "evaluation-dataset-v2"
-  project_id  = "proj-abc123"
-  description = "Curated dataset for evaluating customer support responses"
-}
+# Practical dataset with metadata for downstream workflows.
+resource "braintrustdata_dataset" "curated" {
+  name        = "customer-support-curated"
+  project_id  = braintrustdata_project.evaluation.id
+  description = "Curated evaluation dataset"
 
-# Create a dataset with metadata
-resource "braintrustdata_dataset" "with_metadata" {
-  name       = "training-dataset"
-  project_id = "proj-abc123"
   metadata = {
     version      = "1.0"
     source       = "production-logs"
     sample_count = "10000"
-    date_range   = "2024-01-01-to-2024-03-31"
+    owner        = "evaluation-platform"
   }
 }
 
-# Create a dataset with all optional attributes
-resource "braintrustdata_dataset" "complete" {
-  name        = "full-featured-dataset"
-  project_id  = "proj-abc123"
-  description = "Comprehensive dataset with all configuration options"
-  metadata = {
-    data_type       = "conversation"
-    use_case        = "summarization"
-    quality_score   = "0.95"
-    annotation_type = "human-labeled"
+output "dataset_ids" {
+  value = {
+    minimal = braintrustdata_dataset.minimal.id
+    curated = braintrustdata_dataset.curated.id
   }
 }
 ```
@@ -94,5 +74,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Datasets can be imported using their ID
-terraform import braintrustdata_dataset.example dataset-id-here
+terraform import braintrustdata_dataset.minimal dataset-id-here
 ```

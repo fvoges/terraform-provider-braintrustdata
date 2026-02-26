@@ -31,3 +31,6 @@ Binding keys are `project_key|role_key` and `binding_key_delimiter` is constrain
 ## Notes
 
 - This module is the sole writer of project role groups and their `member_groups`.
+- Typical composition:
+  - `examples/workflows/access-control-lifecycle/project-access-stack`
+  - paired with `examples/workflows/access-control-lifecycle/teams-stack`

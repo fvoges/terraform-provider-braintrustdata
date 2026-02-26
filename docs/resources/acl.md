@@ -13,52 +13,53 @@ Manages a Braintrust ACL (Access Control List) entry. ACLs grant specific permis
 ## Example Usage
 
 ```terraform
-# Grant read permission to a user on a project
 resource "braintrustdata_project" "example" {
-  name        = "my-project"
-  description = "Example project"
+  name        = "acl-example-project"
+  description = "Project used for ACL examples"
 }
 
-resource "braintrustdata_acl" "user_read" {
+resource "braintrustdata_group" "viewers" {
+  name        = "acl-example-viewers"
+  description = "Users with project read access"
+}
+
+# Group-based access: grant read on the project to the viewers group.
+resource "braintrustdata_acl" "group_viewer_read" {
   object_id   = braintrustdata_project.example.id
   object_type = "project"
-  user_id     = "user-id-here"
+  group_id    = braintrustdata_group.viewers.id
   permission  = "read"
 }
 
-# Grant update permission to a group on a dataset
-resource "braintrustdata_group" "data_team" {
-  name        = "data-team"
-  description = "Data science team"
-}
-
-resource "braintrustdata_acl" "group_update" {
-  object_id   = "dataset-id-here"
-  object_type = "dataset"
-  group_id    = braintrustdata_group.data_team.id
+# User-based access: grant update for a specific user.
+# replace with real ID or wire from data/resource
+resource "braintrustdata_acl" "user_editor_update" {
+  object_id   = braintrustdata_project.example.id
+  object_type = "project"
+  user_id     = "866a8a8a-fee9-4a5b-8278-12970de499c2"
   permission  = "update"
 }
 
-# Grant permission to a role on an organization
-resource "braintrustdata_role" "admin" {
-  name        = "admin"
-  description = "Administrator role"
+resource "braintrustdata_role" "restricted_viewer" {
+  name        = "acl-example-restricted-viewer"
+  description = "Read access restricted to experiments"
 }
 
-resource "braintrustdata_acl" "role_org_access" {
-  object_id   = "org-id-here"
-  object_type = "organization"
-  role_id     = braintrustdata_role.admin.id
-  permission  = "create"
-}
-
-# Grant restricted access (only for specific object types)
-resource "braintrustdata_acl" "restricted" {
+# Role-based access with a restricted object type scope.
+resource "braintrustdata_acl" "role_restricted_read" {
   object_id            = braintrustdata_project.example.id
   object_type          = "project"
-  user_id              = "user-id-here"
+  role_id              = braintrustdata_role.restricted_viewer.id
   permission           = "read"
   restrict_object_type = "experiment"
+}
+
+output "acl_ids" {
+  value = {
+    group_viewer_read = braintrustdata_acl.group_viewer_read.id
+    user_editor       = braintrustdata_acl.user_editor_update.id
+    role_restricted   = braintrustdata_acl.role_restricted_read.id
+  }
 }
 ```
 
@@ -91,5 +92,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # ACLs can be imported using their ID
-terraform import braintrustdata_acl.example acl-123456789
+terraform import braintrustdata_acl.group_viewer_read acl-123456789
 ```

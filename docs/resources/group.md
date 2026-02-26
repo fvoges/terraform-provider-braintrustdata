@@ -13,32 +13,37 @@ Manages a Braintrust group. Groups are collections of users that can be assigned
 ## Example Usage
 
 ```terraform
-terraform {
-  required_providers {
-    braintrustdata = {
-      source = "braintrustdata/braintrustdata"
-    }
-  }
+# Minimal group.
+resource "braintrustdata_group" "support_reviewers" {
+  name        = "support-reviewers"
+  description = "Users who review support experiments"
 }
 
-# Create a simple group
+# Group with direct users plus nested group membership.
 resource "braintrustdata_group" "ml_team" {
   name        = "ml-team"
-  description = "Machine Learning Team"
+  description = "Machine learning team"
+
+  # replace with real ID or wire from data/resource
+  member_users  = ["866a8a8a-fee9-4a5b-8278-12970de499c2"]
+  member_groups = [braintrustdata_group.support_reviewers.id]
 }
 
-# Create a group with members
-resource "braintrustdata_group" "reviewers" {
-  name        = "experiment-reviewers"
-  description = "Users who can review experiments"
-  member_ids  = ["user-123", "user-456"]
-}
-
-# Create a group in a specific organization
+# Optional org-scoped group.
 resource "braintrustdata_group" "org_admins" {
   name        = "org-admins"
   description = "Organization administrators"
-  org_id      = "org-specific-id"
+
+  # replace with real ID or wire from data/resource
+  org_id = "org-specific-id"
+}
+
+output "group_ids" {
+  value = {
+    support_reviewers = braintrustdata_group.support_reviewers.id
+    ml_team           = braintrustdata_group.ml_team.id
+    org_admins        = braintrustdata_group.org_admins.id
+  }
 }
 ```
 

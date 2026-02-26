@@ -1,21 +1,17 @@
-# Create a basic project
-resource "braintrustdata_project" "example" {
-  name        = "my-ml-project"
-  description = "ML evaluation project for tracking model performance"
-}
-
-# Project with minimal configuration
+# Minimal project.
 resource "braintrustdata_project" "minimal" {
   name = "minimal-project"
 }
 
-# Output project details
-output "project_id" {
-  value       = braintrustdata_project.example.id
-  description = "The ID of the created project"
+# Practical project used by datasets/experiments.
+resource "braintrustdata_project" "evaluation" {
+  name        = "customer-support-evaluation"
+  description = "Project for evaluating support model quality"
 }
 
-output "project_org_id" {
-  value       = braintrustdata_project.example.org_id
-  description = "The organization ID of the project"
+output "project_ids" {
+  value = {
+    minimal    = braintrustdata_project.minimal.id
+    evaluation = braintrustdata_project.evaluation.id
+  }
 }

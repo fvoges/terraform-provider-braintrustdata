@@ -24,6 +24,11 @@ fmt:
 # Run linter
 lint:
 	golangci-lint run
+	$(MAKE) examples-lint
+
+# Run examples static checks
+examples-lint:
+	bash scripts/check-examples.sh
 
 # Generate documentation
 generate:
@@ -60,10 +65,11 @@ help:
 	@echo "  install            - Install provider locally for testing"
 	@echo "  fmt                - Format Go code"
 	@echo "  lint               - Run golangci-lint"
+	@echo "  examples-lint      - Run static checks for examples/ integrity"
 	@echo "  generate           - Generate documentation with tfplugindocs"
 	@echo "  pre-commit-install - Install pre-commit hooks"
 	@echo "  pre-commit-run     - Run pre-commit hooks manually"
 	@echo "  clean              - Remove build artifacts"
 	@echo "  help               - Display this help message"
 
-.PHONY: build test testacc install fmt lint generate pre-commit-install pre-commit-run clean help
+.PHONY: build test testacc install fmt lint examples-lint generate pre-commit-install pre-commit-run clean help
