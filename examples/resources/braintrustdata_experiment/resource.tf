@@ -60,4 +60,14 @@ resource "braintrustdata_experiment" "complete" {
     cost_per_run    = "0.05"
   }
   tags = ["ml-ops", "summarization", "cost-optimized"]
+  repo_info = {
+    commit         = "abc123def456"
+    branch         = "main"
+    tag            = "v1.2.3"
+    dirty          = false
+    author_name    = "Jane Developer"
+    author_email   = "jane@example.com"
+    commit_message = "Tune summarization prompt"
+    commit_time    = "2026-02-18T12:00:00Z"
+  }
 }

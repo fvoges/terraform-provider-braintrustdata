@@ -86,6 +86,34 @@ func TestAccExperimentResource_PublicToggle(t *testing.T) {
 	})
 }
 
+func TestAccExperimentResource_WithRepoInfo(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccExperimentResourceConfigWithRepoInfo(true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "name", "test-experiment-repo-info"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "repo_info.commit", "abc123"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "repo_info.branch", "main"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "repo_info.dirty", "false"),
+				),
+			},
+			{
+				// Ensure removing repo_info from config does not implicitly clear it.
+				Config: testAccExperimentResourceConfigWithRepoInfo(false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "name", "test-experiment-repo-info"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "repo_info.commit", "abc123"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "repo_info.branch", "main"),
+					resource.TestCheckResourceAttr("braintrustdata_experiment.test", "repo_info.dirty", "false"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccExperimentResource_StatePersistence(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -189,6 +217,33 @@ resource "braintrustdata_experiment" "test" {
   public     = %[2]t
 }
 `, name, public)
+}
+
+func testAccExperimentResourceConfigWithRepoInfo(withRepoInfo bool) string {
+	repoInfo := ""
+	if withRepoInfo {
+		repoInfo = `
+  repo_info = {
+    commit         = "abc123"
+    branch         = "main"
+    dirty          = false
+    author_name    = "Terraform Test"
+    author_email   = "terraform@example.com"
+    commit_message = "initial commit"
+    commit_time    = "2026-02-18T12:00:00Z"
+  }`
+	}
+
+	return fmt.Sprintf(`
+resource "braintrustdata_project" "test" {
+  name = "test-project-for-experiment"
+}
+
+resource "braintrustdata_experiment" "test" {
+  project_id = braintrustdata_project.test.id
+  name       = "test-experiment-repo-info"%s
+}
+`, repoInfo)
 }
 
 /*
