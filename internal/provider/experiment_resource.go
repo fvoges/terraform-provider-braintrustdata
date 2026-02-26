@@ -169,6 +169,7 @@ func (r *ExperimentResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					},
 					"git_diff": schema.StringAttribute{
 						Optional:            true,
+						Sensitive:           true,
 						MarkdownDescription: "Diff against the most recent commit when the repo was dirty.",
 					},
 				},

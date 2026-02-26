@@ -281,3 +281,35 @@ func TestExperimentResourceSchema_RepoInfoUseStateForUnknown(t *testing.T) {
 		t.Fatalf("expected plan value to use prior state, got %s", modifierResp.PlanValue.String())
 	}
 }
+
+func TestExperimentResourceSchema_RepoInfoGitDiffSensitive(t *testing.T) {
+	t.Parallel()
+
+	r := NewExperimentResource().(*ExperimentResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	repoInfoAttr, ok := schemaResp.Schema.Attributes["repo_info"]
+	if !ok {
+		t.Fatal("expected repo_info attribute in schema")
+	}
+
+	nestedAttr, ok := repoInfoAttr.(schema.SingleNestedAttribute)
+	if !ok {
+		t.Fatalf("expected repo_info to be schema.SingleNestedAttribute, got %T", repoInfoAttr)
+	}
+
+	gitDiffAttr, ok := nestedAttr.Attributes["git_diff"]
+	if !ok {
+		t.Fatal("expected git_diff attribute in repo_info schema")
+	}
+
+	gitDiffStringAttr, ok := gitDiffAttr.(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("expected git_diff to be schema.StringAttribute, got %T", gitDiffAttr)
+	}
+
+	if !gitDiffStringAttr.IsSensitive() {
+		t.Fatal("expected repo_info.git_diff to be sensitive")
+	}
+}

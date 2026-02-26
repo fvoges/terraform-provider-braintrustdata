@@ -123,7 +123,7 @@ Optional:
 - `commit_message` (String) Most recent commit message.
 - `commit_time` (String) Time of the most recent commit.
 - `dirty` (Boolean) Whether the repository had uncommitted changes.
-- `git_diff` (String) Diff against the most recent commit when the repo was dirty.
+- `git_diff` (String, Sensitive) Diff against the most recent commit when the repo was dirty.
 - `tag` (String) Tag name on the most recent commit.
 
 ## Import
