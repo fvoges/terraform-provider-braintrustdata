@@ -52,17 +52,27 @@ func TestBuildListRolesOptions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			opts, err := buildListRolesOptions(tc.model)
+			opts, diags := buildListRolesOptions(tc.model)
 			if tc.wantErrLike != "" {
-				if err == nil || !strings.Contains(err.Error(), tc.wantErrLike) {
-					t.Fatalf("expected error containing %q, got %v", tc.wantErrLike, err)
+				if !diags.HasError() {
+					t.Fatalf("expected diagnostic containing %q, got none", tc.wantErrLike)
+				}
+				found := false
+				for _, diag := range diags {
+					if strings.Contains(diag.Detail(), tc.wantErrLike) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("expected diagnostic containing %q, got %v", tc.wantErrLike, diags)
 				}
 
 				return
 			}
 
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
 			}
 			if opts == nil {
 				t.Fatalf("expected options, got nil")

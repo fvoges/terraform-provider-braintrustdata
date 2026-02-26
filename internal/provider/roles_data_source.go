@@ -152,9 +152,9 @@ func (d *RolesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	listOpts, err := buildListRolesOptions(data)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Filters", err.Error())
+	listOpts, filterDiags := buildListRolesOptions(data)
+	resp.Diagnostics.Append(filterDiags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -189,12 +189,15 @@ func (d *RolesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func buildListRolesOptions(data RolesDataSourceModel) (*client.ListRolesOptions, error) {
+func buildListRolesOptions(data RolesDataSourceModel) (*client.ListRolesOptions, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
 	hasStartingAfter := !data.StartingAfter.IsNull() && data.StartingAfter.ValueString() != ""
 	hasEndingBefore := !data.EndingBefore.IsNull() && data.EndingBefore.ValueString() != ""
 
 	if hasStartingAfter && hasEndingBefore {
-		return nil, fmt.Errorf("cannot specify both 'starting_after' and 'ending_before'")
+		diags.AddError("Invalid Filters", "cannot specify both 'starting_after' and 'ending_before'.")
+		return nil, diags
 	}
 
 	listOpts := &client.ListRolesOptions{}
@@ -208,12 +211,14 @@ func buildListRolesOptions(data RolesDataSourceModel) (*client.ListRolesOptions,
 	if !data.Limit.IsNull() {
 		limit := data.Limit.ValueInt64()
 		if limit < 1 {
-			return nil, fmt.Errorf("'limit' must be greater than or equal to 1")
+			diags.AddError("Invalid Limit", "'limit' must be greater than or equal to 1.")
+			return nil, diags
 		}
 
 		maxInt := int64(^uint(0) >> 1)
 		if limit > maxInt {
-			return nil, fmt.Errorf("'limit' exceeds supported platform integer size")
+			diags.AddError("Invalid Limit", "'limit' exceeds supported platform integer size.")
+			return nil, diags
 		}
 
 		listOpts.Limit = int(limit)
@@ -225,7 +230,7 @@ func buildListRolesOptions(data RolesDataSourceModel) (*client.ListRolesOptions,
 		listOpts.EndingBefore = data.EndingBefore.ValueString()
 	}
 
-	return listOpts, nil
+	return listOpts, diags
 }
 
 func rolesDataSourceRoleFromRole(ctx context.Context, role *client.Role) (RolesDataSourceRole, diag.Diagnostics) {
