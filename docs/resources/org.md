@@ -23,8 +23,8 @@ resource "braintrustdata_org" "current" {
 
 output "organization" {
   value = {
-    id                  = braintrustdata_org.current.id
-    name                = braintrustdata_org.current.name
+    id                   = braintrustdata_org.current.id
+    name                 = braintrustdata_org.current.name
     image_rendering_mode = braintrustdata_org.current.image_rendering_mode
   }
 }
