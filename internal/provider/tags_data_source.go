@@ -222,7 +222,7 @@ func buildListTagsOptions(ctx context.Context, data TagsDataSourceModel) (*clien
 	hasEndingBefore := !data.EndingBefore.IsNull() && data.EndingBefore.ValueString() != ""
 
 	if hasStartingAfter && hasEndingBefore {
-		diags.AddError("Invalid Filters", "cannot specify both 'starting_after' and 'ending_before'.")
+		diags.AddError("Conflicting Attributes", "Cannot specify both 'starting_after' and 'ending_before'.")
 		return nil, diags
 	}
 

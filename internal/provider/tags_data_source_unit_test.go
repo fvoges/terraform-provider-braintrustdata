@@ -45,7 +45,7 @@ func TestBuildListTagsOptions(t *testing.T) {
 				StartingAfter: types.StringValue("tag-1"),
 				EndingBefore:  types.StringValue("tag-2"),
 			},
-			wantErrLike: "cannot specify both 'starting_after' and 'ending_before'",
+			wantErrLike: "Cannot specify both 'starting_after' and 'ending_before'",
 		},
 		"rejects zero limit": {
 			model: TagsDataSourceModel{
