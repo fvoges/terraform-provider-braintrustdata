@@ -21,7 +21,7 @@ data "braintrustdata_prompt" "by_id" {
 
 # Read a prompt by name + project context.
 data "braintrustdata_prompt" "by_name" {
-  name       = "support-agent"
+  name = "support-agent"
   # replace with real ID or wire from data/resource
   project_id = "proj-abc123"
 }
@@ -29,9 +29,9 @@ data "braintrustdata_prompt" "by_name" {
 output "prompt_lookup" {
   value = {
     by_id = {
-      id           = data.braintrustdata_prompt.by_id.id
-      name         = data.braintrustdata_prompt.by_id.name
-      slug         = data.braintrustdata_prompt.by_id.slug
+      id            = data.braintrustdata_prompt.by_id.id
+      name          = data.braintrustdata_prompt.by_id.name
+      slug          = data.braintrustdata_prompt.by_id.slug
       function_type = data.braintrustdata_prompt.by_id.function_type
     }
     by_name = {
