@@ -116,7 +116,7 @@ func TestEnvironmentVariablesDataSourceEnvironmentVariableFromEnvironmentVariabl
 		ObjectType:  "project",
 		ObjectID:    "project-1",
 		Description: "Used by evaluation prompts",
-		Created:     "2026-02-26T00:00:00Z",
+		Created:     "2024-01-15T10:30:00Z",
 	})
 
 	if envVarModel.ID.ValueString() != "env-var-1" {
@@ -134,7 +134,7 @@ func TestEnvironmentVariablesDataSourceEnvironmentVariableFromEnvironmentVariabl
 	if envVarModel.Description.ValueString() != "Used by evaluation prompts" {
 		t.Fatalf("description mismatch: got=%q", envVarModel.Description.ValueString())
 	}
-	if envVarModel.Created.ValueString() != "2026-02-26T00:00:00Z" {
+	if envVarModel.Created.ValueString() != "2024-01-15T10:30:00Z" {
 		t.Fatalf("created mismatch: got=%q", envVarModel.Created.ValueString())
 	}
 }

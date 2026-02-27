@@ -80,7 +80,7 @@ func TestPopulateEnvironmentVariableDataSourceModel(t *testing.T) {
 		ObjectType:  "project",
 		ObjectID:    "project-1",
 		Description: "Used by evaluation prompts",
-		Created:     "2026-02-26T00:00:00Z",
+		Created:     "2024-01-15T10:30:00Z",
 	}
 
 	populateEnvironmentVariableDataSourceModel(&model, envVar)
@@ -100,7 +100,7 @@ func TestPopulateEnvironmentVariableDataSourceModel(t *testing.T) {
 	if model.Description.ValueString() != "Used by evaluation prompts" {
 		t.Fatalf("description mismatch: got=%q", model.Description.ValueString())
 	}
-	if model.Created.ValueString() != "2026-02-26T00:00:00Z" {
+	if model.Created.ValueString() != "2024-01-15T10:30:00Z" {
 		t.Fatalf("created mismatch: got=%q", model.Created.ValueString())
 	}
 }

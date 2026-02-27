@@ -23,7 +23,7 @@ func TestGetEnvironmentVariable(t *testing.T) {
 			ObjectType: "project",
 			ObjectID:   "project-123",
 			Name:       "OPENAI_API_KEY",
-			Created:    "2026-02-26T00:00:00Z",
+			Created:    "2024-01-15T10:30:00Z",
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -92,7 +92,7 @@ func TestListEnvironmentVariables_WithOptions(t *testing.T) {
 					ObjectType: "project",
 					ObjectID:   "project-123",
 					Name:       "OPENAI_API_KEY",
-					Created:    "2026-02-26T00:00:00Z",
+					Created:    "2024-01-15T10:30:00Z",
 				},
 			},
 		}
