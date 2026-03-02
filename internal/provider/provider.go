@@ -164,6 +164,8 @@ func (p *BraintrustProvider) DataSources(_ context.Context) []func() datasource.
 		NewOrgsDataSource,
 		NewProjectDataSource,
 		NewProjectsDataSource,
+		NewPromptDataSource,
+		NewPromptsDataSource,
 		NewRoleDataSource,
 		NewRolesDataSource,
 		NewTagDataSource,
