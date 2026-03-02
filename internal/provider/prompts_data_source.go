@@ -218,8 +218,10 @@ func (d *PromptsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 func buildListPromptsOptions(data PromptsDataSourceModel) (*client.ListPromptsOptions, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	hasStartingAfter := !data.StartingAfter.IsNull() && data.StartingAfter.ValueString() != ""
-	hasEndingBefore := !data.EndingBefore.IsNull() && data.EndingBefore.ValueString() != ""
+	startingAfter := strings.TrimSpace(data.StartingAfter.ValueString())
+	endingBefore := strings.TrimSpace(data.EndingBefore.ValueString())
+	hasStartingAfter := !data.StartingAfter.IsNull() && startingAfter != ""
+	hasEndingBefore := !data.EndingBefore.IsNull() && endingBefore != ""
 
 	if hasStartingAfter && hasEndingBefore {
 		diags.AddError("Invalid Filters", "cannot specify both 'starting_after' and 'ending_before'.")
@@ -263,10 +265,10 @@ func buildListPromptsOptions(data PromptsDataSourceModel) (*client.ListPromptsOp
 		listOpts.Limit = int(limit)
 	}
 	if hasStartingAfter {
-		listOpts.StartingAfter = data.StartingAfter.ValueString()
+		listOpts.StartingAfter = startingAfter
 	}
 	if hasEndingBefore {
-		listOpts.EndingBefore = data.EndingBefore.ValueString()
+		listOpts.EndingBefore = endingBefore
 	}
 
 	return listOpts, diags
