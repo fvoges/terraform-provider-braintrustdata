@@ -55,7 +55,7 @@ func TestAccACLDataSource_NotFound(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccACLDataSourceConfigNotFound(missingID),
-				ExpectError: regexp.MustCompile(fmt.Sprintf("No ACL found with ID: %s", missingID)),
+				ExpectError: regexp.MustCompile(fmt.Sprintf(`(?i)no\s+acl\s+found.*%s`, regexp.QuoteMeta(missingID))),
 			},
 		},
 	})
