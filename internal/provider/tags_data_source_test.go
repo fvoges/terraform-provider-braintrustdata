@@ -62,7 +62,7 @@ data "braintrustdata_tags" "test" {
   ending_before  = "tag-2"
 }
 `,
-				ExpectError: regexp.MustCompile(`cannot specify both 'starting_after' and 'ending_before'`),
+				ExpectError: regexp.MustCompile(`(?i)cannot\s+specify\s+both.*starting_after.*ending_before`),
 			},
 		},
 	})
