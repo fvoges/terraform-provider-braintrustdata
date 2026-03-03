@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 func TestAccPromptResource(t *testing.T) {
@@ -106,6 +107,90 @@ func TestAccPromptResource_StatePersistence(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccPromptResource_EmptyTagsNoDiff verifies that explicitly setting
+// `tags = []` does not produce a perpetual plan diff on subsequent refreshes.
+func TestAccPromptResource_EmptyTagsNoDiff(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPromptResourceConfigWithEmptyTags(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "name", "test-prompt-empty-tags"),
+					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "tags.#", "0"),
+				),
+			},
+			// Refresh and verify no perpetual diff when tags = [].
+			{
+				Config:   testAccPromptResourceConfigWithEmptyTags(),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccPromptResource_RequiresReplaceOnProjectIDChange verifies that
+// changing project_id destroys and recreates the prompt (RequiresReplace
+// plan modifier) rather than attempting an in-place update.
+func TestAccPromptResource_RequiresReplaceOnProjectIDChange(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: create the prompt under project A.
+			{
+				Config: testAccPromptResourceConfigWithProject("test-project-a-for-prompt", "test-prompt-replace"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "name", "test-prompt-replace"),
+					resource.TestCheckResourceAttrSet("braintrustdata_prompt.test", "project_id"),
+				),
+			},
+			// Step 2: switch to project B — plan must show a replacement.
+			{
+				Config: testAccPromptResourceConfigWithProject("test-project-b-for-prompt", "test-prompt-replace"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(
+							"braintrustdata_prompt.test",
+							plancheck.ResourceActionDestroyBeforeCreate,
+						),
+					},
+				},
+			},
+		},
+	})
+}
+
+func testAccPromptResourceConfigWithEmptyTags() string {
+	return `
+resource "braintrustdata_project" "test" {
+  name = "test-project-for-prompt"
+}
+
+resource "braintrustdata_prompt" "test" {
+  project_id  = braintrustdata_project.test.id
+  name        = "test-prompt-empty-tags"
+  description = "Prompt with explicitly empty tags"
+
+  tags = []
+}
+`
+}
+
+func testAccPromptResourceConfigWithProject(projectName, promptName string) string {
+	return fmt.Sprintf(`
+resource "braintrustdata_project" "test" {
+  name = %[1]q
+}
+
+resource "braintrustdata_prompt" "test" {
+  project_id = braintrustdata_project.test.id
+  name       = %[2]q
+}
+`, projectName, promptName)
 }
 
 func testAccPromptResourceConfig(name, description string) string {

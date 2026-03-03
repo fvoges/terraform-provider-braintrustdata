@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -398,11 +399,14 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 	// prompt_data: normalize to canonical JSON to avoid perpetual diffs.
 	if prompt.PromptData != nil {
 		encoded, err := json.Marshal(prompt.PromptData)
-		if err == nil {
-			data.PromptData = types.StringValue(string(encoded))
-		} else {
-			data.PromptData = types.StringNull()
+		if err != nil {
+			diags.AddError(
+				"Error Encoding prompt_data",
+				fmt.Sprintf("Unable to encode prompt_data as JSON: %s", err),
+			)
+			return diags
 		}
+		data.PromptData = types.StringValue(string(encoded))
 	} else {
 		data.PromptData = types.StringNull()
 	}
@@ -423,7 +427,9 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 		data.Metadata = types.MapNull(types.StringType)
 	}
 
-	// tags
+	// tags: always store a set (empty rather than null) so that `tags = []`
+	// in config does not produce a perpetual diff when the API returns
+	// nil/empty tags.
 	if len(prompt.Tags) > 0 {
 		tagsSet, tagDiags := types.SetValueFrom(ctx, types.StringType, prompt.Tags)
 		diags.Append(tagDiags...)
@@ -432,7 +438,7 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 		}
 		data.Tags = tagsSet
 	} else {
-		data.Tags = types.SetNull(types.StringType)
+		data.Tags = types.SetValueMust(types.StringType, []attr.Value{})
 	}
 
 	return diags
