@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -326,16 +327,35 @@ func buildCreatePromptRequest(ctx context.Context, data PromptResourceModel) (*c
 		return nil, diags
 	}
 
+	slug := data.Slug.ValueString()
+	if slug == "" {
+		slug = slugify(data.Name.ValueString())
+	}
+
 	return &client.CreatePromptRequest{
 		ProjectID:    data.ProjectID.ValueString(),
 		Name:         data.Name.ValueString(),
-		Slug:         data.Slug.ValueString(),
+		Slug:         slug,
 		Description:  data.Description.ValueString(),
 		FunctionType: data.FunctionType.ValueString(),
 		Metadata:     metadata,
 		Tags:         tags,
 		PromptData:   promptData,
 	}, diags
+}
+
+// slugify converts a name to a URL-safe slug: lowercase, spaces to hyphens,
+// non-alphanumeric-hyphen characters removed.
+func slugify(name string) string {
+	s := strings.ToLower(name)
+	s = strings.ReplaceAll(s, " ", "-")
+	var b strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // buildUpdatePromptRequest converts a Terraform model to an UpdatePromptRequest.

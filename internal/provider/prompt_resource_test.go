@@ -135,6 +135,43 @@ func TestAccPromptResource_EmptyTagsNoDiff(t *testing.T) {
 // TestAccPromptResource_RequiresReplaceOnProjectIDChange verifies that
 // changing project_id destroys and recreates the prompt (RequiresReplace
 // plan modifier) rather than attempting an in-place update.
+// TestAccPromptResource_SlugDerivedFromName verifies that when no slug is
+// provided, the provider derives one from the name and the resource is created
+// successfully with a non-empty slug in state.
+func TestAccPromptResource_SlugDerivedFromName(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPromptResourceConfigNoSlug("My Test Prompt"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "name", "My Test Prompt"),
+					resource.TestCheckResourceAttrSet("braintrustdata_prompt.test", "slug"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccPromptResource_WithExplicitSlug verifies that when an explicit slug is
+// provided, that exact slug is used and stored in state.
+func TestAccPromptResource_WithExplicitSlug(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPromptResourceConfigWithSlug("My Test Prompt", "my-custom-slug"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "name", "My Test Prompt"),
+					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "slug", "my-custom-slug"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccPromptResource_RequiresReplaceOnProjectIDChange(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -251,4 +288,31 @@ resource "braintrustdata_prompt" "test" {
   })
 }
 `
+}
+
+func testAccPromptResourceConfigNoSlug(name string) string {
+	return fmt.Sprintf(`
+resource "braintrustdata_project" "test" {
+  name = "test-project-for-prompt"
+}
+
+resource "braintrustdata_prompt" "test" {
+  project_id = braintrustdata_project.test.id
+  name       = %[1]q
+}
+`, name)
+}
+
+func testAccPromptResourceConfigWithSlug(name, slug string) string {
+	return fmt.Sprintf(`
+resource "braintrustdata_project" "test" {
+  name = "test-project-for-prompt"
+}
+
+resource "braintrustdata_prompt" "test" {
+  project_id = braintrustdata_project.test.id
+  name       = %[1]q
+  slug       = %[2]q
+}
+`, name, slug)
 }

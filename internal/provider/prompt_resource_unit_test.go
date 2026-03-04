@@ -9,6 +9,89 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// TestSlugify verifies the slug derivation helper.
+func TestSlugify(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		input string
+		want  string
+	}{
+		{input: "My Prompt", want: "my-prompt"},
+		{input: "support agent", want: "support-agent"},
+		{input: "Hello World!", want: "hello-world"},
+		{input: "already-slug", want: "already-slug"},
+		{input: "MixedCase123", want: "mixedcase123"},
+		{input: "special@#chars", want: "specialchars"},
+		{input: "  leading-trailing  ", want: "--leading-trailing--"},
+		{input: "a b  c", want: "a-b--c"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			got := slugify(tc.input)
+			if got != tc.want {
+				t.Errorf("slugify(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestBuildCreatePromptRequest_SlugDerivedFromName verifies that when slug is
+// not provided, it is derived from the name.
+func TestBuildCreatePromptRequest_SlugDerivedFromName(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	data := PromptResourceModel{
+		ProjectID:   types.StringValue("project-123"),
+		Name:        types.StringValue("My Support Agent"),
+		Slug:        types.StringNull(),
+		Description: types.StringNull(),
+		Tags:        types.SetValueMust(types.StringType, []attr.Value{}),
+		Metadata:    types.MapNull(types.StringType),
+		PromptData:  types.StringNull(),
+	}
+
+	req, diags := buildCreatePromptRequest(ctx, data)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if req.Slug != "my-support-agent" {
+		t.Errorf("expected derived slug %q, got %q", "my-support-agent", req.Slug)
+	}
+}
+
+// TestBuildCreatePromptRequest_ExplicitSlugWins verifies that when slug is
+// explicitly provided, it is used as-is rather than derived from the name.
+func TestBuildCreatePromptRequest_ExplicitSlugWins(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	data := PromptResourceModel{
+		ProjectID:   types.StringValue("project-123"),
+		Name:        types.StringValue("My Support Agent"),
+		Slug:        types.StringValue("custom-slug"),
+		Description: types.StringNull(),
+		Tags:        types.SetValueMust(types.StringType, []attr.Value{}),
+		Metadata:    types.MapNull(types.StringType),
+		PromptData:  types.StringNull(),
+	}
+
+	req, diags := buildCreatePromptRequest(ctx, data)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if req.Slug != "custom-slug" {
+		t.Errorf("expected explicit slug %q, got %q", "custom-slug", req.Slug)
+	}
+}
+
 // TestSetPromptResourceModel_EmptyTagsBecomesEmptySet verifies that when the
 // API returns nil or empty tags, setPromptResourceModel writes an empty set
 // (not null) to state. This prevents a perpetual diff when the config
