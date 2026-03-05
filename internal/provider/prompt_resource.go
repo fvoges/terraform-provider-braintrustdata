@@ -447,9 +447,10 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 		data.Metadata = types.MapNull(types.StringType)
 	}
 
-	// tags: always store a set (empty rather than null) so that `tags = []`
-	// in config does not produce a perpetual diff when the API returns
-	// nil/empty tags.
+	// tags: preserve plan/state intent for null vs empty set.
+	// - Non-empty API tags → store as set.
+	// - Empty/nil API tags + plan had null (tags omitted) → keep null.
+	// - Empty/nil API tags + plan had empty set (tags = []) → store empty set.
 	if len(prompt.Tags) > 0 {
 		tagsSet, tagDiags := types.SetValueFrom(ctx, types.StringType, prompt.Tags)
 		diags.Append(tagDiags...)
@@ -457,6 +458,8 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 			return diags
 		}
 		data.Tags = tagsSet
+	} else if data.Tags.IsNull() {
+		data.Tags = types.SetNull(types.StringType)
 	} else {
 		data.Tags = types.SetValueMust(types.StringType, []attr.Value{})
 	}

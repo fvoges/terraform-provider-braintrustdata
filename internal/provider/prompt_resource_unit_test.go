@@ -92,6 +92,50 @@ func TestBuildCreatePromptRequest_ExplicitSlugWins(t *testing.T) {
 	}
 }
 
+// TestSetPromptResourceModel_NullTagsStaysNull verifies that when tags is
+// omitted from config (plan carries null), setPromptResourceModel preserves
+// null after the API returns nil/empty tags. Previously it always wrote an
+// empty set, causing plan=null vs state=empty-set inconsistency errors.
+func TestSetPromptResourceModel_NullTagsStaysNull(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	testCases := []struct {
+		name string
+		tags []string
+	}{
+		{name: "nil_tags", tags: nil},
+		{name: "empty_tags", tags: []string{}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			prompt := &client.Prompt{
+				ID:        "prompt-1",
+				ProjectID: "project-1",
+				Name:      "test",
+				Tags:      tc.tags,
+			}
+
+			// Simulate plan/state where tags was omitted from config (null).
+			var data PromptResourceModel
+			data.Tags = types.SetNull(types.StringType)
+
+			diags := setPromptResourceModel(ctx, &data, prompt)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+
+			if !data.Tags.IsNull() {
+				t.Errorf("expected null tags (omitted from config), got non-null: %v", data.Tags)
+			}
+		})
+	}
+}
+
 // TestSetPromptResourceModel_EmptyTagsBecomesEmptySet verifies that when the
 // API returns nil or empty tags, setPromptResourceModel writes an empty set
 // (not null) to state. This prevents a perpetual diff when the config
@@ -120,7 +164,10 @@ func TestSetPromptResourceModel_EmptyTagsBecomesEmptySet(t *testing.T) {
 				Tags:      tc.tags,
 			}
 
+			// Simulate plan/state where config has explicit `tags = []`.
 			var data PromptResourceModel
+			data.Tags = types.SetValueMust(types.StringType, []attr.Value{})
+
 			diags := setPromptResourceModel(ctx, &data, prompt)
 			if diags.HasError() {
 				t.Fatalf("unexpected diagnostics: %v", diags)
@@ -203,7 +250,10 @@ func TestSetPromptResourceModel_EmptyTagsMatchesConfigEmptySet(t *testing.T) {
 		Tags:      nil,
 	}
 
+	// Simulate plan/state where config has explicit `tags = []`.
 	var data PromptResourceModel
+	data.Tags = types.SetValueMust(types.StringType, []attr.Value{})
+
 	diags := setPromptResourceModel(ctx, &data, prompt)
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
