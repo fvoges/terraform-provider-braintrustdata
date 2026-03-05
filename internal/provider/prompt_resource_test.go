@@ -179,15 +179,15 @@ func TestAccPromptResource_RequiresReplaceOnProjectIDChange(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: create the prompt under project A.
 			{
-				Config: testAccPromptResourceConfigWithProject("test-project-a-for-prompt", "test-prompt-replace"),
+				Config: testAccPromptResourceConfigOnProjectA("test-prompt-replace"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("braintrustdata_prompt.test", "name", "test-prompt-replace"),
 					resource.TestCheckResourceAttrSet("braintrustdata_prompt.test", "project_id"),
 				),
 			},
-			// Step 2: switch to project B — plan must show a replacement.
+			// Step 2: switch prompt to project B — project_id changes → replacement required.
 			{
-				Config: testAccPromptResourceConfigWithProject("test-project-b-for-prompt", "test-prompt-replace"),
+				Config: testAccPromptResourceConfigOnProjectB("test-prompt-replace"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(
@@ -199,6 +199,40 @@ func TestAccPromptResource_RequiresReplaceOnProjectIDChange(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccPromptResourceConfigOnProjectA(promptName string) string {
+	return fmt.Sprintf(`
+resource "braintrustdata_project" "proj_a" {
+  name = "test-project-a-for-prompt-replace"
+}
+
+resource "braintrustdata_project" "proj_b" {
+  name = "test-project-b-for-prompt-replace"
+}
+
+resource "braintrustdata_prompt" "test" {
+  project_id = braintrustdata_project.proj_a.id
+  name       = %[1]q
+}
+`, promptName)
+}
+
+func testAccPromptResourceConfigOnProjectB(promptName string) string {
+	return fmt.Sprintf(`
+resource "braintrustdata_project" "proj_a" {
+  name = "test-project-a-for-prompt-replace"
+}
+
+resource "braintrustdata_project" "proj_b" {
+  name = "test-project-b-for-prompt-replace"
+}
+
+resource "braintrustdata_prompt" "test" {
+  project_id = braintrustdata_project.proj_b.id
+  name       = %[1]q
+}
+`, promptName)
 }
 
 func testAccPromptResourceConfigWithEmptyTags() string {
@@ -215,19 +249,6 @@ resource "braintrustdata_prompt" "test" {
   tags = []
 }
 `
-}
-
-func testAccPromptResourceConfigWithProject(projectName, promptName string) string {
-	return fmt.Sprintf(`
-resource "braintrustdata_project" "test" {
-  name = %[1]q
-}
-
-resource "braintrustdata_prompt" "test" {
-  project_id = braintrustdata_project.test.id
-  name       = %[2]q
-}
-`, projectName, promptName)
 }
 
 func testAccPromptResourceConfig(name, description string) string {
