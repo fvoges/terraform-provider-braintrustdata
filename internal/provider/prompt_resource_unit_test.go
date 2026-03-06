@@ -344,6 +344,133 @@ func TestSetPromptResourceModel_EmptyTagsMatchesConfigEmptySet(t *testing.T) {
 	}
 }
 
+// TestSetPromptResourceModel_NullMetadataStaysNull verifies that when metadata
+// is omitted from config (plan carries null), setPromptResourceModel preserves
+// null after the API returns nil/empty metadata.
+func TestSetPromptResourceModel_NullMetadataStaysNull(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	testCases := []struct {
+		metadata map[string]interface{}
+		name     string
+	}{
+		{name: "nil_metadata", metadata: nil},
+		{name: "empty_metadata", metadata: map[string]interface{}{}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			prompt := &client.Prompt{
+				ID:        "prompt-1",
+				ProjectID: "project-1",
+				Name:      "test",
+				Metadata:  tc.metadata,
+			}
+
+			// Simulate plan/state where metadata was omitted from config (null).
+			var data PromptResourceModel
+			data.Metadata = types.MapNull(types.StringType)
+
+			diags := setPromptResourceModel(ctx, &data, prompt)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+
+			if !data.Metadata.IsNull() {
+				t.Errorf("expected null metadata (omitted from config), got non-null: %v", data.Metadata)
+			}
+		})
+	}
+}
+
+// TestSetPromptResourceModel_EmptyMetadataBecomesEmptyMap verifies that when
+// the API returns nil or empty metadata, setPromptResourceModel writes an empty
+// map (not null) to state when config declares `metadata = {}`.
+func TestSetPromptResourceModel_EmptyMetadataBecomesEmptyMap(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	testCases := []struct {
+		metadata map[string]interface{}
+		name     string
+	}{
+		{name: "nil_metadata", metadata: nil},
+		{name: "empty_metadata", metadata: map[string]interface{}{}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			prompt := &client.Prompt{
+				ID:        "prompt-1",
+				ProjectID: "project-1",
+				Name:      "test",
+				Metadata:  tc.metadata,
+			}
+
+			// Simulate plan/state where config has explicit `metadata = {}`.
+			var data PromptResourceModel
+			data.Metadata = types.MapValueMust(types.StringType, map[string]attr.Value{})
+
+			diags := setPromptResourceModel(ctx, &data, prompt)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+
+			if data.Metadata.IsNull() {
+				t.Errorf("expected non-null metadata map, got null; config metadata={} would produce perpetual diff")
+			}
+			if data.Metadata.IsUnknown() {
+				t.Errorf("expected known metadata map, got unknown")
+			}
+
+			// Should be an empty map (zero elements).
+			elems := data.Metadata.Elements()
+			if len(elems) != 0 {
+				t.Errorf("expected 0 metadata elements, got %d", len(elems))
+			}
+		})
+	}
+}
+
+// TestSetPromptResourceModel_EmptyMetadataMatchesConfigEmptyMap verifies that
+// an empty map produced by setPromptResourceModel is equal to the empty map
+// that Terraform would produce from `metadata = {}` in config.
+func TestSetPromptResourceModel_EmptyMetadataMatchesConfigEmptyMap(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	prompt := &client.Prompt{
+		ID:        "prompt-1",
+		ProjectID: "project-1",
+		Name:      "test",
+		Metadata:  nil,
+	}
+
+	// Simulate plan/state where config has explicit `metadata = {}`.
+	var data PromptResourceModel
+	data.Metadata = types.MapValueMust(types.StringType, map[string]attr.Value{})
+
+	diags := setPromptResourceModel(ctx, &data, prompt)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	// Simulate what Terraform would put in state from `metadata = {}`.
+	configEmptyMap := types.MapValueMust(types.StringType, map[string]attr.Value{})
+
+	if !data.Metadata.Equal(configEmptyMap) {
+		t.Errorf("state metadata %v is not equal to config empty map %v; this will produce a perpetual diff", data.Metadata, configEmptyMap)
+	}
+}
+
 // TestSetPromptResourceModel_PromptDataMarshalError verifies that a marshal
 // failure on prompt_data produces a Terraform diagnostic error and returns
 // early rather than silently setting prompt_data to null.

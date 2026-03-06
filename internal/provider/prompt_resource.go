@@ -448,7 +448,10 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 		data.PromptData = types.StringNull()
 	}
 
-	// metadata
+	// metadata: preserve plan/state intent for null vs empty map.
+	// - Non-empty API metadata -> store as map.
+	// - Empty/nil API metadata + plan had null (metadata omitted) -> keep null.
+	// - Empty/nil API metadata + plan had empty map (metadata = {}) -> store empty map.
 	if len(prompt.Metadata) > 0 {
 		metadataStrings := make(map[string]string)
 		for k, v := range prompt.Metadata {
@@ -460,8 +463,10 @@ func setPromptResourceModel(ctx context.Context, data *PromptResourceModel, prom
 			return diags
 		}
 		data.Metadata = metadataValue
-	} else {
+	} else if data.Metadata.IsNull() {
 		data.Metadata = types.MapNull(types.StringType)
+	} else {
+		data.Metadata = types.MapValueMust(types.StringType, map[string]attr.Value{})
 	}
 
 	// tags: preserve plan/state intent for null vs empty set.

@@ -132,9 +132,6 @@ func TestAccPromptResource_EmptyTagsNoDiff(t *testing.T) {
 	})
 }
 
-// TestAccPromptResource_RequiresReplaceOnProjectIDChange verifies that
-// changing project_id destroys and recreates the prompt (RequiresReplace
-// plan modifier) rather than attempting an in-place update.
 // TestAccPromptResource_SlugDerivedFromName verifies that when no slug is
 // provided, the provider derives one from the name and the resource is created
 // successfully with a non-empty slug in state.
@@ -172,6 +169,9 @@ func TestAccPromptResource_WithExplicitSlug(t *testing.T) {
 	})
 }
 
+// TestAccPromptResource_RequiresReplaceOnProjectIDChange verifies that
+// changing project_id destroys and recreates the prompt (RequiresReplace
+// plan modifier) rather than attempting an in-place update.
 func TestAccPromptResource_RequiresReplaceOnProjectIDChange(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
