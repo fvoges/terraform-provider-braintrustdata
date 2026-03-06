@@ -47,7 +47,7 @@ resource "braintrustdata_prompt" "structured" {
 
   prompt_data = jsonencode({
     prompt = {
-      type    = "chat"
+      type = "chat"
       messages = [
         {
           role    = "system"
@@ -97,3 +97,14 @@ output "prompt_ids" {
 - `id` (String) The unique identifier of the prompt.
 - `org_id` (String) The ID of the organization this prompt belongs to.
 - `user_id` (String) The ID of the user who created the prompt.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Prompts can be imported using their ID
+terraform import braintrustdata_prompt.minimal prompt-id-here
+```
