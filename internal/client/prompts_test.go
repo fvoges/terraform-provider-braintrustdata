@@ -293,8 +293,8 @@ func TestUpdatePrompt(t *testing.T) {
 		resp := Prompt{
 			ID:          "prompt-abc",
 			ProjectID:   "project-123",
-			Name:        req.Name,
-			Description: req.Description,
+			Name:        promptDerefString(req.Name),
+			Description: promptDerefString(req.Description),
 		}
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(resp)
@@ -305,8 +305,8 @@ func TestUpdatePrompt(t *testing.T) {
 	c.httpClient = server.Client()
 
 	prompt, err := c.UpdatePrompt(context.Background(), "prompt-abc", &UpdatePromptRequest{
-		Name:        "support-agent-v2",
-		Description: "Updated description",
+		Name:        stringPointer("support-agent-v2"),
+		Description: stringPointer("Updated description"),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -316,13 +316,81 @@ func TestUpdatePrompt(t *testing.T) {
 	}
 }
 
+func TestUpdatePrompt_SendsExplicitClearFields(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/prompt/prompt-abc" {
+			t.Errorf("expected path /v1/prompt/prompt-abc, got %s", r.URL.Path)
+		}
+
+		var req map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+
+		for _, key := range []string{"name", "description", "metadata", "tags", "prompt_data"} {
+			if _, ok := req[key]; !ok {
+				t.Errorf("expected %q to be present in update payload, body=%v", key, req)
+			}
+		}
+
+		resp := Prompt{
+			ID:        "prompt-abc",
+			ProjectID: "project-123",
+			Name:      "support-agent-v2",
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	_, err := c.UpdatePrompt(context.Background(), "prompt-abc", &UpdatePromptRequest{
+		Name:        stringPointer("support-agent-v2"),
+		Description: stringPointer(""),
+		Metadata:    mapPointer(map[string]interface{}{}),
+		Tags:        stringSlicePointer([]string{}),
+		PromptData:  interfacePointer(nil),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestUpdatePrompt_EmptyID(t *testing.T) {
 	c := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
 
-	_, err := c.UpdatePrompt(context.Background(), "", &UpdatePromptRequest{Name: "test"})
+	_, err := c.UpdatePrompt(context.Background(), "", &UpdatePromptRequest{Name: stringPointer("test")})
 	if !errors.Is(err, ErrEmptyPromptID) {
 		t.Fatalf("expected ErrEmptyPromptID, got %v", err)
 	}
+}
+
+func stringPointer(v string) *string {
+	return &v
+}
+
+func stringSlicePointer(v []string) *[]string {
+	return &v
+}
+
+func mapPointer(v map[string]interface{}) *map[string]interface{} {
+	return &v
+}
+
+func interfacePointer(v interface{}) *interface{} {
+	return &v
+}
+
+func promptDerefString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
 }
 
 func TestDeletePrompt(t *testing.T) {

@@ -59,13 +59,13 @@ type CreatePromptRequest struct {
 
 // UpdatePromptRequest represents a request to update a prompt.
 type UpdatePromptRequest struct {
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	PromptData   interface{}            `json:"prompt_data,omitempty"`
-	Name         string                 `json:"name,omitempty"`
-	Slug         string                 `json:"slug,omitempty"`
-	Description  string                 `json:"description,omitempty"`
-	FunctionType string                 `json:"function_type,omitempty"`
-	Tags         []string               `json:"tags,omitempty"`
+	Metadata     *map[string]interface{} `json:"metadata,omitempty"`
+	PromptData   *interface{}            `json:"prompt_data,omitempty"`
+	Name         *string                 `json:"name,omitempty"`
+	Slug         *string                 `json:"slug,omitempty"`
+	Description  *string                 `json:"description,omitempty"`
+	FunctionType *string                 `json:"function_type,omitempty"`
+	Tags         *[]string               `json:"tags,omitempty"`
 }
 
 func promptPath(id string) string {

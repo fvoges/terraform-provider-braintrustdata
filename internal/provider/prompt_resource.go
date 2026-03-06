@@ -256,23 +256,22 @@ func (r *PromptResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	prompt, err := r.client.UpdatePrompt(ctx, state.ID.ValueString(), updateReq)
+	_, err := r.client.UpdatePrompt(ctx, state.ID.ValueString(), updateReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update prompt, got error: %s", err))
+		return
+	}
+
+	// Read back to get complete state (PATCH response can be partial).
+	prompt, err := r.client.GetPrompt(ctx, state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read prompt after update, got error: %s", err))
 		return
 	}
 
 	resp.Diagnostics.Append(setPromptResourceModel(ctx, &data, prompt)...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Preserve fields not returned by update API.
-	data.ID = state.ID
-	data.ProjectID = state.ProjectID
-	data.Created = state.Created
-	if data.OrgID.IsNull() || data.OrgID.IsUnknown() {
-		data.OrgID = state.OrgID
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -362,40 +361,58 @@ func slugify(name string) string {
 func buildUpdatePromptRequest(ctx context.Context, data PromptResourceModel) (*client.UpdatePromptRequest, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var metadata map[string]interface{}
-	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
-		m, metaDiags := extractMetadata(ctx, data.Metadata)
-		diags.Append(metaDiags...)
-		if diags.HasError() {
+	req := &client.UpdatePromptRequest{
+		Name: promptStringPtr(data.Name.ValueString()),
+	}
+
+	if !data.Slug.IsUnknown() {
+		req.Slug = promptStringPtr(data.Slug.ValueString())
+	}
+
+	if !data.Description.IsUnknown() {
+		req.Description = promptStringPtr(data.Description.ValueString())
+	}
+
+	if !data.FunctionType.IsUnknown() {
+		req.FunctionType = promptStringPtr(data.FunctionType.ValueString())
+	}
+
+	if !data.Metadata.IsUnknown() {
+		if data.Metadata.IsNull() {
+			req.Metadata = promptMapPtr(map[string]interface{}{})
+		} else {
+			metadata, metaDiags := extractMetadata(ctx, data.Metadata)
+			diags.Append(metaDiags...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			req.Metadata = promptMapPtr(metadata)
+		}
+	}
+
+	if !data.Tags.IsUnknown() {
+		if data.Tags.IsNull() {
+			req.Tags = promptStringSlicePtr([]string{})
+		} else {
+			tags, tagDiags := extractTags(ctx, data.Tags)
+			diags.Append(tagDiags...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			req.Tags = promptStringSlicePtr(tags)
+		}
+	}
+
+	if !data.PromptData.IsUnknown() {
+		promptData, err := decodePromptData(data.PromptData)
+		if err != nil {
+			diags.AddError("Invalid prompt_data", fmt.Sprintf("prompt_data must be valid JSON: %s", err))
 			return nil, diags
 		}
-		metadata = m
-	} else if data.Metadata.IsNull() {
-		// Explicitly clear metadata.
-		metadata = make(map[string]interface{})
+		req.PromptData = promptInterfacePtr(promptData)
 	}
 
-	tags, tagDiags := extractTags(ctx, data.Tags)
-	diags.Append(tagDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	promptData, err := decodePromptData(data.PromptData)
-	if err != nil {
-		diags.AddError("Invalid prompt_data", fmt.Sprintf("prompt_data must be valid JSON: %s", err))
-		return nil, diags
-	}
-
-	return &client.UpdatePromptRequest{
-		Name:         data.Name.ValueString(),
-		Slug:         data.Slug.ValueString(),
-		Description:  data.Description.ValueString(),
-		FunctionType: data.FunctionType.ValueString(),
-		Metadata:     metadata,
-		Tags:         tags,
-		PromptData:   promptData,
-	}, diags
+	return req, diags
 }
 
 // setPromptResourceModel populates the resource model from an API prompt response.
@@ -507,4 +524,20 @@ func decodePromptData(v types.String) (interface{}, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func promptStringPtr(s string) *string {
+	return &s
+}
+
+func promptStringSlicePtr(values []string) *[]string {
+	return &values
+}
+
+func promptMapPtr(values map[string]interface{}) *map[string]interface{} {
+	return &values
+}
+
+func promptInterfacePtr(v interface{}) *interface{} {
+	return &v
 }

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
@@ -89,6 +90,82 @@ func TestBuildCreatePromptRequest_ExplicitSlugWins(t *testing.T) {
 
 	if req.Slug != "custom-slug" {
 		t.Errorf("expected explicit slug %q, got %q", "custom-slug", req.Slug)
+	}
+}
+
+func TestBuildUpdatePromptRequest_SendsExplicitClearFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	data := PromptResourceModel{
+		Name:         types.StringValue("support-agent-v2"),
+		Slug:         types.StringValue("support-agent-v2"),
+		Description:  types.StringNull(),
+		FunctionType: types.StringNull(),
+		Metadata:     types.MapNull(types.StringType),
+		Tags:         types.SetNull(types.StringType),
+		PromptData:   types.StringNull(),
+	}
+
+	req, diags := buildUpdatePromptRequest(ctx, data)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal update payload: %v", err)
+	}
+
+	for _, key := range []string{"description", "function_type", "metadata", "tags", "prompt_data"} {
+		if _, ok := payload[key]; !ok {
+			t.Errorf("expected %q to be present in update payload when config sets explicit clear", key)
+		}
+	}
+}
+
+func TestBuildUpdatePromptRequest_OmitsUnknownOptionalFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	data := PromptResourceModel{
+		Name:         types.StringValue("support-agent-v2"),
+		Slug:         types.StringUnknown(),
+		Description:  types.StringUnknown(),
+		FunctionType: types.StringUnknown(),
+		Metadata:     types.MapUnknown(types.StringType),
+		Tags:         types.SetUnknown(types.StringType),
+		PromptData:   types.StringUnknown(),
+	}
+
+	req, diags := buildUpdatePromptRequest(ctx, data)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal update payload: %v", err)
+	}
+
+	if _, ok := payload["name"]; !ok {
+		t.Fatal("expected name to be included in update payload")
+	}
+
+	for _, key := range []string{"slug", "description", "function_type", "metadata", "tags", "prompt_data"} {
+		if _, ok := payload[key]; ok {
+			t.Errorf("expected %q to be omitted when value is unknown", key)
+		}
 	}
 }
 
