@@ -45,8 +45,64 @@ type ListPromptsResponse struct {
 	Prompts []Prompt `json:"objects"`
 }
 
+// CreatePromptRequest represents a request to create a prompt.
+type CreatePromptRequest struct {
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	PromptData   interface{}            `json:"prompt_data,omitempty"`
+	ProjectID    string                 `json:"project_id"`
+	Name         string                 `json:"name"`
+	Slug         string                 `json:"slug,omitempty"`
+	Description  string                 `json:"description,omitempty"`
+	FunctionType string                 `json:"function_type,omitempty"`
+	Tags         []string               `json:"tags,omitempty"`
+}
+
+// UpdatePromptRequest represents a request to update a prompt.
+type UpdatePromptRequest struct {
+	Metadata     *map[string]interface{} `json:"metadata,omitempty"`
+	PromptData   *interface{}            `json:"prompt_data,omitempty"`
+	Name         *string                 `json:"name,omitempty"`
+	Slug         *string                 `json:"slug,omitempty"`
+	Description  *string                 `json:"description,omitempty"`
+	FunctionType *string                 `json:"function_type,omitempty"`
+	Tags         *[]string               `json:"tags,omitempty"`
+}
+
 func promptPath(id string) string {
 	return "/v1/prompt/" + url.PathEscape(id)
+}
+
+// CreatePrompt creates a new prompt.
+func (c *Client) CreatePrompt(ctx context.Context, req *CreatePromptRequest) (*Prompt, error) {
+	var prompt Prompt
+	err := c.Do(ctx, "POST", "/v1/prompt", req, &prompt)
+	if err != nil {
+		return nil, err
+	}
+	return &prompt, nil
+}
+
+// UpdatePrompt updates an existing prompt.
+func (c *Client) UpdatePrompt(ctx context.Context, id string, req *UpdatePromptRequest) (*Prompt, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, ErrEmptyPromptID
+	}
+	var prompt Prompt
+	err := c.Do(ctx, "PATCH", promptPath(id), req, &prompt)
+	if err != nil {
+		return nil, err
+	}
+	return &prompt, nil
+}
+
+// DeletePrompt deletes a prompt by ID.
+func (c *Client) DeletePrompt(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrEmptyPromptID
+	}
+	return c.Do(ctx, "DELETE", promptPath(id), nil, nil)
 }
 
 // GetPrompt retrieves a prompt by ID.
