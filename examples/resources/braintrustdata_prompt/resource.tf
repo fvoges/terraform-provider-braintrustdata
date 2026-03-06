@@ -32,7 +32,7 @@ resource "braintrustdata_prompt" "structured" {
 
   prompt_data = jsonencode({
     prompt = {
-      type    = "chat"
+      type = "chat"
       messages = [
         {
           role    = "system"
