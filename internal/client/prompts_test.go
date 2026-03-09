@@ -180,3 +180,272 @@ func TestListPrompts_SpecialCharacters(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestCreatePrompt(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			t.Errorf("expected POST method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/prompt" {
+			t.Errorf("expected path /v1/prompt, got %s", r.URL.Path)
+		}
+
+		var req CreatePromptRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if req.Name != "support-agent" {
+			t.Errorf("expected name support-agent, got %s", req.Name)
+		}
+		if req.ProjectID != "project-123" {
+			t.Errorf("expected project_id project-123, got %s", req.ProjectID)
+		}
+
+		resp := Prompt{
+			ID:          "prompt-abc",
+			ProjectID:   "project-123",
+			Name:        "support-agent",
+			Slug:        "support-agent",
+			Description: "Support assistant",
+			Created:     "2026-02-27T00:00:00Z",
+			OrgID:       "org-test",
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	prompt, err := c.CreatePrompt(context.Background(), &CreatePromptRequest{
+		ProjectID:   "project-123",
+		Name:        "support-agent",
+		Description: "Support assistant",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if prompt.ID != "prompt-abc" {
+		t.Errorf("expected id prompt-abc, got %s", prompt.ID)
+	}
+	if prompt.Name != "support-agent" {
+		t.Errorf("expected name support-agent, got %s", prompt.Name)
+	}
+}
+
+func TestCreatePrompt_WithTagsAndMetadata(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req CreatePromptRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if len(req.Tags) != 2 {
+			t.Errorf("expected 2 tags, got %d", len(req.Tags))
+		}
+		if req.Metadata["env"] != "prod" {
+			t.Errorf("expected metadata env=prod, got %v", req.Metadata["env"])
+		}
+
+		resp := Prompt{
+			ID:        "prompt-tagged",
+			ProjectID: "project-123",
+			Name:      "tagged-prompt",
+			Tags:      req.Tags,
+			Metadata:  req.Metadata,
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	prompt, err := c.CreatePrompt(context.Background(), &CreatePromptRequest{
+		ProjectID: "project-123",
+		Name:      "tagged-prompt",
+		Tags:      []string{"ml", "production"},
+		Metadata:  map[string]interface{}{"env": "prod"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if prompt.ID != "prompt-tagged" {
+		t.Errorf("expected id prompt-tagged, got %s", prompt.ID)
+	}
+}
+
+func TestUpdatePrompt(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/prompt/prompt-abc" {
+			t.Errorf("expected path /v1/prompt/prompt-abc, got %s", r.URL.Path)
+		}
+
+		var req UpdatePromptRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+
+		resp := Prompt{
+			ID:          "prompt-abc",
+			ProjectID:   "project-123",
+			Name:        promptDerefString(req.Name),
+			Description: promptDerefString(req.Description),
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	prompt, err := c.UpdatePrompt(context.Background(), "prompt-abc", &UpdatePromptRequest{
+		Name:        stringPointer("support-agent-v2"),
+		Description: stringPointer("Updated description"),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if prompt.Name != "support-agent-v2" {
+		t.Errorf("expected name support-agent-v2, got %s", prompt.Name)
+	}
+}
+
+func TestUpdatePrompt_SendsExplicitClearFields(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/prompt/prompt-abc" {
+			t.Errorf("expected path /v1/prompt/prompt-abc, got %s", r.URL.Path)
+		}
+
+		var req map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+
+		for _, key := range []string{"name", "description", "metadata", "tags", "prompt_data"} {
+			if _, ok := req[key]; !ok {
+				t.Errorf("expected %q to be present in update payload, body=%v", key, req)
+			}
+		}
+
+		resp := Prompt{
+			ID:        "prompt-abc",
+			ProjectID: "project-123",
+			Name:      "support-agent-v2",
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	_, err := c.UpdatePrompt(context.Background(), "prompt-abc", &UpdatePromptRequest{
+		Name:        stringPointer("support-agent-v2"),
+		Description: stringPointer(""),
+		Metadata:    mapPointer(map[string]interface{}{}),
+		Tags:        stringSlicePointer([]string{}),
+		PromptData:  interfacePointer(nil),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdatePrompt_EmptyID(t *testing.T) {
+	c := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
+
+	_, err := c.UpdatePrompt(context.Background(), "", &UpdatePromptRequest{Name: stringPointer("test")})
+	if !errors.Is(err, ErrEmptyPromptID) {
+		t.Fatalf("expected ErrEmptyPromptID, got %v", err)
+	}
+}
+
+func stringPointer(v string) *string {
+	return &v
+}
+
+func stringSlicePointer(v []string) *[]string {
+	return &v
+}
+
+func mapPointer(v map[string]interface{}) *map[string]interface{} {
+	return &v
+}
+
+func interfacePointer(v interface{}) *interface{} {
+	return &v
+}
+
+func promptDerefString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func TestDeletePrompt(t *testing.T) {
+	var deletedID string
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" {
+			t.Errorf("expected DELETE method, got %s", r.Method)
+		}
+		deletedID = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": "prompt-abc"})
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	err := c.DeletePrompt(context.Background(), "prompt-abc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if deletedID != "/v1/prompt/prompt-abc" {
+		t.Errorf("expected DELETE /v1/prompt/prompt-abc, got %s", deletedID)
+	}
+}
+
+func TestDeletePrompt_EmptyID(t *testing.T) {
+	c := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
+
+	err := c.DeletePrompt(context.Background(), "")
+	if !errors.Is(err, ErrEmptyPromptID) {
+		t.Fatalf("expected ErrEmptyPromptID, got %v", err)
+	}
+}
+
+func TestDeletePrompt_SpecialCharactersInID(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Go HTTP servers decode %2F in r.URL.Path; check RawPath for encoding.
+		rawPath := r.URL.RawPath
+		if rawPath == "" {
+			rawPath = r.URL.Path
+		}
+		if rawPath != "/v1/prompt/prompt%2Fspecial" {
+			t.Errorf("expected raw path /v1/prompt/prompt%%2Fspecial, got %s", rawPath)
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": "prompt/special"})
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	err := c.DeletePrompt(context.Background(), "prompt/special")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
