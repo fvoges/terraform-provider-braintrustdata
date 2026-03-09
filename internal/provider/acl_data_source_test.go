@@ -48,7 +48,7 @@ data "braintrustdata_acl" "test" {
 }
 
 func TestAccACLDataSource_NotFound(t *testing.T) {
-	missingID := "123e4567-e89b-42d3-a456-426614174000"
+	missingID := "00000000-0000-0000-0000-000000000000"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -69,7 +69,7 @@ func TestAccACLDataSource_InvalidUUID(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccACLDataSourceConfigNotFound(invalidID),
-				ExpectError: regexp.MustCompile(`(?i)error\s+reading\s+acl`),
+				ExpectError: regexp.MustCompile(`(?is)error\s+reading\s+acl.*(invalid\s+uuid|uuid.*invalid|status\s*400|400\s+bad\s+request)`),
 			},
 		},
 	})
