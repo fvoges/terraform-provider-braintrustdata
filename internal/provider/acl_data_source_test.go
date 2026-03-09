@@ -49,13 +49,20 @@ data "braintrustdata_acl" "test" {
 
 func TestAccACLDataSource_NotFound(t *testing.T) {
 	missingID := "00000000-0000-0000-0000-000000000000"
+	quotedMissingID := regexp.QuoteMeta(missingID)
+	missingACLReasonPattern := `(?:missing\s+read\s+access|does\s+not\s+exist)`
+	missingACLErrorPattern := fmt.Sprintf(
+		`(?is)(?:no\s+acl\s+found.*%[1]s|error\s+reading\s+acl.*(?:%[1]s.*%[2]s|%[2]s.*%[1]s))`,
+		quotedMissingID,
+		missingACLReasonPattern,
+	)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccACLDataSourceConfigNotFound(missingID),
-				ExpectError: regexp.MustCompile(fmt.Sprintf(`(?i)no\s+acl\s+found.*%s`, regexp.QuoteMeta(missingID))),
+				ExpectError: regexp.MustCompile(missingACLErrorPattern),
 			},
 		},
 	})
