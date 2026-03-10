@@ -342,10 +342,21 @@ func populateFunctionDataSourceModel(ctx context.Context, data *FunctionDataSour
 	data.ProjectID = stringOrNull(function.ProjectID)
 	data.Slug = stringOrNull(function.Slug)
 
-	data.FunctionData = jsonEncodedOrNull(function.FunctionData)
-	data.FunctionSchema = jsonEncodedOrNull(function.FunctionSchema)
-	data.Origin = jsonEncodedOrNull(function.Origin)
-	data.PromptData = jsonEncodedOrNull(function.PromptData)
+	functionData, functionDataDiags := jsonEncodedOrNull("function_data", function.FunctionData)
+	diags.Append(functionDataDiags...)
+	data.FunctionData = functionData
+
+	functionSchema, functionSchemaDiags := jsonEncodedOrNull("function_schema", function.FunctionSchema)
+	diags.Append(functionSchemaDiags...)
+	data.FunctionSchema = functionSchema
+
+	origin, originDiags := jsonEncodedOrNull("origin", function.Origin)
+	diags.Append(originDiags...)
+	data.Origin = origin
+
+	promptData, promptDataDiags := jsonEncodedOrNull("prompt_data", function.PromptData)
+	diags.Append(promptDataDiags...)
+	data.PromptData = promptData
 
 	if diags.HasError() {
 		return diags
@@ -380,15 +391,21 @@ func populateFunctionDataSourceModel(ctx context.Context, data *FunctionDataSour
 	return diags
 }
 
-func jsonEncodedOrNull(v interface{}) types.String {
+func jsonEncodedOrNull(fieldName string, v interface{}) (types.String, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
 	if v == nil {
-		return types.StringNull()
+		return types.StringNull(), diags
 	}
 
 	encoded, err := json.Marshal(v)
 	if err != nil {
-		return types.StringNull()
+		diags.AddError(
+			fmt.Sprintf("Error Encoding %s", fieldName),
+			fmt.Sprintf("Could not encode %s to JSON: %s", fieldName, err),
+		)
+		return types.StringNull(), diags
 	}
 
-	return types.StringValue(string(encoded))
+	return types.StringValue(string(encoded)), diags
 }

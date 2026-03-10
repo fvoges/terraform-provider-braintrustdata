@@ -289,20 +289,36 @@ func functionListItemFromFunction(ctx context.Context, function *client.Function
 	var diags diag.Diagnostics
 
 	item := FunctionsDataSourceItem{
-		ID:             stringOrNull(function.ID),
-		XactID:         stringOrNull(function.XactID),
-		Created:        stringOrNull(function.Created),
-		Description:    stringOrNull(function.Description),
-		FunctionData:   jsonEncodedOrNull(function.FunctionData),
-		FunctionSchema: jsonEncodedOrNull(function.FunctionSchema),
-		FunctionType:   stringOrNull(function.FunctionType),
-		LogID:          stringOrNull(function.LogID),
-		Name:           stringOrNull(function.Name),
-		OrgID:          stringOrNull(function.OrgID),
-		Origin:         jsonEncodedOrNull(function.Origin),
-		ProjectID:      stringOrNull(function.ProjectID),
-		PromptData:     jsonEncodedOrNull(function.PromptData),
-		Slug:           stringOrNull(function.Slug),
+		ID:           stringOrNull(function.ID),
+		XactID:       stringOrNull(function.XactID),
+		Created:      stringOrNull(function.Created),
+		Description:  stringOrNull(function.Description),
+		FunctionType: stringOrNull(function.FunctionType),
+		LogID:        stringOrNull(function.LogID),
+		Name:         stringOrNull(function.Name),
+		OrgID:        stringOrNull(function.OrgID),
+		ProjectID:    stringOrNull(function.ProjectID),
+		Slug:         stringOrNull(function.Slug),
+	}
+
+	functionData, functionDataDiags := jsonEncodedOrNull("function_data", function.FunctionData)
+	diags.Append(functionDataDiags...)
+	item.FunctionData = functionData
+
+	functionSchema, functionSchemaDiags := jsonEncodedOrNull("function_schema", function.FunctionSchema)
+	diags.Append(functionSchemaDiags...)
+	item.FunctionSchema = functionSchema
+
+	origin, originDiags := jsonEncodedOrNull("origin", function.Origin)
+	diags.Append(originDiags...)
+	item.Origin = origin
+
+	promptData, promptDataDiags := jsonEncodedOrNull("prompt_data", function.PromptData)
+	diags.Append(promptDataDiags...)
+	item.PromptData = promptData
+
+	if diags.HasError() {
+		return item, diags
 	}
 
 	if len(function.Metadata) > 0 {

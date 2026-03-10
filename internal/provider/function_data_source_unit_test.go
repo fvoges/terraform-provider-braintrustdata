@@ -341,6 +341,39 @@ func TestPopulateFunctionDataSourceModel_Nullables(t *testing.T) {
 	}
 }
 
+func TestPopulateFunctionDataSourceModel_JSONEncodeError(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := FunctionDataSourceModel{}
+	fn := &client.Function{
+		ID: "function-3",
+		FunctionData: map[string]interface{}{
+			"unmarshallable": func() {},
+		},
+	}
+
+	diags := populateFunctionDataSourceModel(ctx, &model, fn)
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics from marshal failure, got none")
+	}
+
+	found := false
+	for _, d := range diags {
+		if d.Summary() == "Error Encoding function_data" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected error summary %q, got %v", "Error Encoding function_data", diags)
+	}
+
+	if !model.FunctionData.IsNull() {
+		t.Fatalf("expected function_data to be null when encoding fails")
+	}
+}
+
 func assertJSONFieldContainsKey(t *testing.T, raw, key string) {
 	t.Helper()
 

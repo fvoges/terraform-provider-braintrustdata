@@ -166,6 +166,35 @@ func TestFunctionListItemFromFunction(t *testing.T) {
 	}
 }
 
+func TestFunctionListItemFromFunction_JSONEncodeError(t *testing.T) {
+	t.Parallel()
+
+	model, diags := functionListItemFromFunction(context.Background(), &client.Function{
+		ID: "function-2",
+		FunctionData: map[string]interface{}{
+			"unmarshallable": make(chan int),
+		},
+	})
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics from marshal failure, got none")
+	}
+
+	found := false
+	for _, d := range diags {
+		if d.Summary() == "Error Encoding function_data" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected error summary %q, got %v", "Error Encoding function_data", diags)
+	}
+
+	if !model.FunctionData.IsNull() {
+		t.Fatalf("expected function_data to be null when encoding fails")
+	}
+}
+
 func TestProviderDataSourcesIncludeFunctionPair(t *testing.T) {
 	t.Parallel()
 

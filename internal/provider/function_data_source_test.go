@@ -118,17 +118,21 @@ data "braintrustdata_function" "by_slug" {
 func TestAccFunctionDataSource_NotFound(t *testing.T) {
 	testAccFunctionDataSourceRequiresAPIKey(t)
 
+	// Use a UUID-shaped sentinel so the backend accepts ID syntax validation
+	// and executes the provider not-found path deterministically.
+	const nonExistentFunctionID = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 data "braintrustdata_function" "test" {
-  id = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+  id = %q
 }
-`,
-				ExpectError: regexp.MustCompile(`No function found with ID: ffffffff-ffff-4fff-8fff-ffffffffffff`),
+`, nonExistentFunctionID),
+				ExpectError: regexp.MustCompile(regexp.QuoteMeta("No function found with ID: " + nonExistentFunctionID)),
 			},
 		},
 	})
