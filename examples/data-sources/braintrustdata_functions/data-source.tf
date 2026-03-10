@@ -22,6 +22,6 @@ output "function_lists" {
   value = {
     by_name_ids = data.braintrustdata_functions.by_name.ids
     by_slug_ids = data.braintrustdata_functions.by_slug.ids
-    paged_ids    = data.braintrustdata_functions.paged.ids
+    paged_ids   = data.braintrustdata_functions.paged.ids
   }
 }
