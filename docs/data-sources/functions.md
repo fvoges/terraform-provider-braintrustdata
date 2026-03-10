@@ -15,6 +15,7 @@ Lists Braintrust functions using API-native filters.
 ```terraform
 # List functions filtered by project + name.
 data "braintrustdata_functions" "by_name" {
+  # replace with real project ID
   project_id = "project-abc123"
   name       = "my-tool"
   limit      = 10
@@ -22,6 +23,7 @@ data "braintrustdata_functions" "by_name" {
 
 # List functions filtered by project + slug.
 data "braintrustdata_functions" "by_slug" {
+  # replace with real project ID
   project_id = "project-abc123"
   slug       = "my-tool"
   limit      = 10
@@ -64,7 +66,6 @@ output "function_lists" {
 
 Read-Only:
 
-- `xact_id` (String) The transactional ID associated with the function.
 - `created` (String) The timestamp when the function was created.
 - `description` (String) A description of the function.
 - `function_data` (String) The function data as a JSON-encoded string.
@@ -80,3 +81,4 @@ Read-Only:
 - `prompt_data` (String) The prompt data as a JSON-encoded string.
 - `slug` (String) The slug of the function.
 - `tags` (Set of String) Tags associated with the function.
+- `xact_id` (String) The transactional ID associated with the function.

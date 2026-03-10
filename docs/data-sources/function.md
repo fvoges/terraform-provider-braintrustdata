@@ -3,12 +3,12 @@
 page_title: "braintrustdata_function Data Source - terraform-provider-braintrustdata"
 subcategory: ""
 description: |-
-  Reads a Braintrust function by id or searchable attributes.
+  Reads a Braintrust function by id or by searchable attributes (project_id + name or project_id + slug).
 ---
 
 # braintrustdata_function (Data Source)
 
-Reads a Braintrust function by `id` or by searchable attributes (`project_id` + `name`, `project_id` + `slug`).
+Reads a Braintrust function by `id` or by searchable attributes (`project_id` + `name` or `project_id` + `slug`).
 
 ## Example Usage
 
@@ -21,12 +21,14 @@ data "braintrustdata_function" "by_id" {
 
 # Read a function by project + name.
 data "braintrustdata_function" "by_name" {
+  # replace with real project ID
   project_id = "project-abc123"
   name       = "my-tool"
 }
 
 # Read a function by project + slug.
 data "braintrustdata_function" "by_slug" {
+  # replace with real project ID
   project_id = "project-abc123"
   slug       = "my-tool"
 }
@@ -53,7 +55,6 @@ output "function_lookup" {
 
 ### Read-Only
 
-- `xact_id` (String) The transactional ID associated with the function.
 - `created` (String) The timestamp when the function was created.
 - `description` (String) A description of the function.
 - `function_data` (String) The function data as a JSON-encoded string.
@@ -65,3 +66,4 @@ output "function_lookup" {
 - `origin` (String) The function origin as a JSON-encoded string.
 - `prompt_data` (String) The prompt data as a JSON-encoded string.
 - `tags` (Set of String) Tags associated with the function.
+- `xact_id` (String) The transactional ID associated with the function.
