@@ -21,15 +21,13 @@ data "braintrustdata_function" "by_id" {
 
 # Read a function by project + name.
 data "braintrustdata_function" "by_name" {
-  # replace with real project ID
-  project_id = "project-abc123"
+  project_id = "project-abc123" # replace with real project ID
   name       = "my-tool"
 }
 
 # Read a function by project + slug.
 data "braintrustdata_function" "by_slug" {
-  # replace with real project ID
-  project_id = "project-abc123"
+  project_id = "project-abc123" # replace with real project ID
   slug       = "my-tool"
 }
 
