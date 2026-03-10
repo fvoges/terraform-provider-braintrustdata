@@ -159,6 +159,8 @@ func (p *BraintrustProvider) DataSources(_ context.Context) []func() datasource.
 		NewEnvironmentVariablesDataSource,
 		NewExperimentDataSource,
 		NewExperimentsDataSource,
+		NewFunctionDataSource,
+		NewFunctionsDataSource,
 		NewGroupDataSource,
 		NewGroupsDataSource,
 		NewOrgDataSource,
