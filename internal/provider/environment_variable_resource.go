@@ -263,6 +263,7 @@ func (r *EnvironmentVariableResource) Update(ctx context.Context, req resource.U
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	plan.Value = resolveEnvironmentVariableValueAfterUpdate(plan.Value, state.Value, updatedEnvVar.Value)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -447,6 +448,22 @@ func setEnvironmentVariableResourceModel(
 	}
 
 	return diags
+}
+
+func resolveEnvironmentVariableValueAfterUpdate(planValue, stateValue types.String, apiValue string) types.String {
+	if apiValue != "" {
+		return types.StringValue(apiValue)
+	}
+
+	if !planValue.IsNull() && !planValue.IsUnknown() {
+		return planValue
+	}
+
+	if !stateValue.IsNull() && !stateValue.IsUnknown() {
+		return stateValue
+	}
+
+	return planValue
 }
 
 func environmentVariableMetadataFromTerraformMap(ctx context.Context, metadataMap types.Map) (map[string]interface{}, diag.Diagnostics) {

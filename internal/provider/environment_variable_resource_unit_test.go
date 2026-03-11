@@ -245,6 +245,49 @@ func TestSetEnvironmentVariableResourceModel_PreservesValueWhenAPIOmitsIt(t *tes
 	}
 }
 
+func TestResolveEnvironmentVariableValueAfterUpdate(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		planValue  types.String
+		stateValue types.String
+		apiValue   string
+		wantValue  types.String
+	}{
+		{
+			name:       "plan value null preserves prior known state",
+			planValue:  types.StringNull(),
+			stateValue: types.StringValue("prior-secret"),
+			wantValue:  types.StringValue("prior-secret"),
+		},
+		{
+			name:       "plan value unknown preserves prior known state",
+			planValue:  types.StringUnknown(),
+			stateValue: types.StringValue("prior-secret"),
+			wantValue:  types.StringValue("prior-secret"),
+		},
+		{
+			name:       "plan value known is retained when api omits value",
+			planValue:  types.StringValue("rotated-secret"),
+			stateValue: types.StringValue("prior-secret"),
+			wantValue:  types.StringValue("rotated-secret"),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := resolveEnvironmentVariableValueAfterUpdate(tc.planValue, tc.stateValue, tc.apiValue)
+			if !got.Equal(tc.wantValue) {
+				t.Fatalf("value mismatch: got=%s want=%s", got.String(), tc.wantValue.String())
+			}
+		})
+	}
+}
+
 func TestProviderResourcesIncludeEnvironmentVariable(t *testing.T) {
 	t.Parallel()
 
