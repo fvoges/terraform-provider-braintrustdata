@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -13,15 +15,78 @@ var ErrEmptyEnvironmentVariableID = errors.New("environment variable ID cannot b
 
 // EnvironmentVariable represents a Braintrust environment variable.
 type EnvironmentVariable struct {
-	ID             string `json:"id"`
-	ObjectType     string `json:"object_type,omitempty"`
-	ObjectID       string `json:"object_id,omitempty"`
-	Name           string `json:"name,omitempty"`
-	Description    string `json:"description,omitempty"`
-	Created        string `json:"created,omitempty"`
-	SecretType     string `json:"secret_type,omitempty"`
-	SecretCategory string `json:"secret_category,omitempty"`
-	Used           bool   `json:"used,omitempty"`
+	ID             string                  `json:"id"`
+	ObjectType     string                  `json:"object_type,omitempty"`
+	ObjectID       string                  `json:"object_id,omitempty"`
+	Name           string                  `json:"name,omitempty"`
+	Value          string                  `json:"value,omitempty"`
+	Description    string                  `json:"description,omitempty"`
+	Metadata       map[string]interface{}  `json:"metadata,omitempty"`
+	Created        string                  `json:"created,omitempty"`
+	SecretType     string                  `json:"secret_type,omitempty"`
+	SecretCategory string                  `json:"secret_category,omitempty"`
+	Used           EnvironmentVariableUsed `json:"used,omitempty"`
+}
+
+// EnvironmentVariableUsed decodes Braintrust's inconsistent `used` response field.
+// The API may return a boolean, a timestamp string, or null. Non-empty strings
+// indicate the variable has been used.
+type EnvironmentVariableUsed bool
+
+// UnmarshalJSON accepts `used` as bool, string, or null.
+func (u *EnvironmentVariableUsed) UnmarshalJSON(data []byte) error {
+	trimmed := strings.TrimSpace(string(data))
+	switch trimmed {
+	case "", "null":
+		*u = false
+		return nil
+	case "true", "false":
+		parsed, err := strconv.ParseBool(trimmed)
+		if err != nil {
+			return err
+		}
+		*u = EnvironmentVariableUsed(parsed)
+		return nil
+	}
+
+	var stringValue string
+	if err := json.Unmarshal(data, &stringValue); err == nil {
+		stringValue = strings.TrimSpace(stringValue)
+		if stringValue == "" {
+			*u = false
+			return nil
+		}
+
+		if parsed, err := strconv.ParseBool(stringValue); err == nil {
+			*u = EnvironmentVariableUsed(parsed)
+			return nil
+		}
+
+		*u = true
+		return nil
+	}
+
+	return fmt.Errorf("unsupported used value: %s", trimmed)
+}
+
+// CreateEnvironmentVariableRequest represents a request to create an environment variable.
+type CreateEnvironmentVariableRequest struct {
+	ObjectType     string                 `json:"object_type"`
+	ObjectID       string                 `json:"object_id"`
+	Name           string                 `json:"name"`
+	Value          string                 `json:"value"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	SecretType     string                 `json:"secret_type,omitempty"`
+	SecretCategory string                 `json:"secret_category,omitempty"`
+}
+
+// UpdateEnvironmentVariableRequest represents a request to update an environment variable.
+type UpdateEnvironmentVariableRequest struct {
+	Name           *string                 `json:"name,omitempty"`
+	Value          *string                 `json:"value,omitempty"`
+	Metadata       *map[string]interface{} `json:"metadata,omitempty"`
+	SecretType     *string                 `json:"secret_type,omitempty"`
+	SecretCategory *string                 `json:"secret_category,omitempty"`
 }
 
 // ListEnvironmentVariablesOptions represents options for listing environment variables.
@@ -40,6 +105,41 @@ type ListEnvironmentVariablesResponse struct {
 
 func environmentVariablePath(id string) string {
 	return "/v1/env_var/" + url.PathEscape(id)
+}
+
+// CreateEnvironmentVariable creates a new environment variable.
+func (c *Client) CreateEnvironmentVariable(ctx context.Context, req *CreateEnvironmentVariableRequest) (*EnvironmentVariable, error) {
+	var environmentVariable EnvironmentVariable
+	if err := c.Do(ctx, "POST", "/v1/env_var", req, &environmentVariable); err != nil {
+		return nil, err
+	}
+
+	return &environmentVariable, nil
+}
+
+// UpdateEnvironmentVariable updates an existing environment variable.
+func (c *Client) UpdateEnvironmentVariable(ctx context.Context, id string, req *UpdateEnvironmentVariableRequest) (*EnvironmentVariable, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, ErrEmptyEnvironmentVariableID
+	}
+
+	var environmentVariable EnvironmentVariable
+	if err := c.Do(ctx, "PATCH", environmentVariablePath(id), req, &environmentVariable); err != nil {
+		return nil, err
+	}
+
+	return &environmentVariable, nil
+}
+
+// DeleteEnvironmentVariable deletes an environment variable by ID.
+func (c *Client) DeleteEnvironmentVariable(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrEmptyEnvironmentVariableID
+	}
+
+	return c.Do(ctx, "DELETE", environmentVariablePath(id), nil, nil)
 }
 
 // GetEnvironmentVariable retrieves an environment variable by ID.
