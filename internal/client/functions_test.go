@@ -180,6 +180,157 @@ func TestListFunctions_SpecialCharacters(t *testing.T) {
 	}
 }
 
+func TestCreateFunction(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/function" {
+			t.Errorf("expected path /v1/function, got %s", r.URL.Path)
+		}
+
+		var req CreateFunctionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if req.ProjectID != "project-123" {
+			t.Errorf("expected project_id project-123, got %s", req.ProjectID)
+		}
+		if req.Name != "support-tool" {
+			t.Errorf("expected name support-tool, got %s", req.Name)
+		}
+		if req.FunctionType != "tool" {
+			t.Errorf("expected function_type tool, got %s", req.FunctionType)
+		}
+		if len(req.Tags) != 2 {
+			t.Errorf("expected 2 tags, got %d", len(req.Tags))
+		}
+
+		resp := Function{
+			ID:           "function-abc",
+			ProjectID:    req.ProjectID,
+			Name:         req.Name,
+			Slug:         req.Slug,
+			Description:  req.Description,
+			FunctionType: req.FunctionType,
+			Metadata:     req.Metadata,
+			Tags:         req.Tags,
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	function, err := c.CreateFunction(context.Background(), &CreateFunctionRequest{
+		ProjectID:    "project-123",
+		Name:         "support-tool",
+		Slug:         "support-tool",
+		Description:  "Support workflow tool",
+		FunctionType: "tool",
+		FunctionData: map[string]interface{}{"runtime": "node"},
+		Metadata:     map[string]interface{}{"owner": "ml"},
+		Tags:         []string{"prod", "support"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if function.ID != "function-abc" {
+		t.Fatalf("expected id function-abc, got %s", function.ID)
+	}
+	if function.Name != "support-tool" {
+		t.Fatalf("expected name support-tool, got %s", function.Name)
+	}
+}
+
+func TestUpdateFunction(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/function/function-123" {
+			t.Errorf("expected path /v1/function/function-123, got %s", r.URL.Path)
+		}
+
+		var req UpdateFunctionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if req.Name == nil || *req.Name != "support-tool-v2" {
+			t.Fatalf("expected name support-tool-v2, got %#v", req.Name)
+		}
+		if req.Description == nil || *req.Description != "Updated description" {
+			t.Fatalf("expected description Updated description, got %#v", req.Description)
+		}
+
+		resp := Function{
+			ID:           "function-123",
+			Name:         *req.Name,
+			Description:  *req.Description,
+			FunctionType: "tool",
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	name := "support-tool-v2"
+	description := "Updated description"
+	function, err := c.UpdateFunction(context.Background(), " function-123 ", &UpdateFunctionRequest{
+		Name:        &name,
+		Description: &description,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if function.Name != "support-tool-v2" {
+		t.Fatalf("expected updated name support-tool-v2, got %s", function.Name)
+	}
+}
+
+func TestUpdateFunction_EmptyID(t *testing.T) {
+	c := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
+
+	_, err := c.UpdateFunction(context.Background(), "", &UpdateFunctionRequest{})
+	if !errors.Is(err, ErrEmptyFunctionID) {
+		t.Fatalf("expected ErrEmptyFunctionID, got %v", err)
+	}
+}
+
+func TestDeleteFunction(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/function/function-123" {
+			t.Errorf("expected path /v1/function/function-123, got %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	c := NewClient("sk-test", server.URL, "org-test")
+	c.httpClient = server.Client()
+
+	if err := c.DeleteFunction(context.Background(), " function-123 "); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteFunction_EmptyID(t *testing.T) {
+	c := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
+
+	err := c.DeleteFunction(context.Background(), "")
+	if !errors.Is(err, ErrEmptyFunctionID) {
+		t.Fatalf("expected ErrEmptyFunctionID, got %v", err)
+	}
+}
+
 func TestIsFunctionNotFound(t *testing.T) {
 	testCases := map[string]struct {
 		err  error
