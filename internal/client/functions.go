@@ -48,8 +48,74 @@ type ListFunctionsResponse struct {
 	Functions []Function `json:"objects"`
 }
 
+// CreateFunctionRequest represents a request to create a function.
+type CreateFunctionRequest struct {
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	FunctionData   interface{}            `json:"function_data"`
+	FunctionSchema interface{}            `json:"function_schema,omitempty"`
+	Origin         interface{}            `json:"origin,omitempty"`
+	PromptData     interface{}            `json:"prompt_data,omitempty"`
+	ProjectID      string                 `json:"project_id"`
+	Name           string                 `json:"name"`
+	Slug           string                 `json:"slug"`
+	Description    string                 `json:"description,omitempty"`
+	FunctionType   string                 `json:"function_type,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+}
+
+// UpdateFunctionRequest represents a request to update a function.
+type UpdateFunctionRequest struct {
+	Metadata       *map[string]interface{} `json:"metadata,omitempty"`
+	FunctionData   *interface{}            `json:"function_data,omitempty"`
+	FunctionSchema *interface{}            `json:"function_schema,omitempty"`
+	Origin         *interface{}            `json:"origin,omitempty"`
+	PromptData     *interface{}            `json:"prompt_data,omitempty"`
+	Name           *string                 `json:"name,omitempty"`
+	Slug           *string                 `json:"slug,omitempty"`
+	Description    *string                 `json:"description,omitempty"`
+	FunctionType   *string                 `json:"function_type,omitempty"`
+	Tags           *[]string               `json:"tags,omitempty"`
+}
+
 func functionPath(id string) string {
 	return "/v1/function/" + url.PathEscape(id)
+}
+
+// CreateFunction creates a new function.
+func (c *Client) CreateFunction(ctx context.Context, req *CreateFunctionRequest) (*Function, error) {
+	var function Function
+	err := c.Do(ctx, "POST", "/v1/function", req, &function)
+	if err != nil {
+		return nil, err
+	}
+
+	return &function, nil
+}
+
+// UpdateFunction updates an existing function.
+func (c *Client) UpdateFunction(ctx context.Context, id string, req *UpdateFunctionRequest) (*Function, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, ErrEmptyFunctionID
+	}
+
+	var function Function
+	err := c.Do(ctx, "PATCH", functionPath(id), req, &function)
+	if err != nil {
+		return nil, err
+	}
+
+	return &function, nil
+}
+
+// DeleteFunction deletes a function by ID.
+func (c *Client) DeleteFunction(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrEmptyFunctionID
+	}
+
+	return c.Do(ctx, "DELETE", functionPath(id), nil, nil)
 }
 
 // GetFunction retrieves a function by ID.

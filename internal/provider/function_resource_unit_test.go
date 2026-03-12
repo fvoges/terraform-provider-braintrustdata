@@ -1,0 +1,406 @@
+package provider
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+
+	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+func TestBuildCreateFunctionRequest(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := FunctionResourceModel{
+		ProjectID:      types.StringValue("project-123"),
+		Name:           types.StringValue("support-tool"),
+		Slug:           types.StringValue("support-tool"),
+		Description:    types.StringValue("Support workflow tool"),
+		FunctionType:   types.StringValue("tool"),
+		FunctionData:   types.StringValue(`{"runtime":"node","entrypoint":"index.ts"}`),
+		FunctionSchema: types.StringValue(`{"type":"object"}`),
+		PromptData:     types.StringValue(`{"prompt":{"type":"chat"}}`),
+		Metadata: types.MapValueMust(types.StringType, map[string]attr.Value{
+			"owner": types.StringValue("ml"),
+		}),
+		Tags: types.SetValueMust(types.StringType, []attr.Value{
+			types.StringValue("prod"),
+			types.StringValue("support"),
+		}),
+	}
+
+	req, diags := buildCreateFunctionRequest(ctx, model)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if req.ProjectID != "project-123" {
+		t.Fatalf("expected project_id project-123, got %q", req.ProjectID)
+	}
+	if req.FunctionType != "tool" {
+		t.Fatalf("expected function_type tool, got %q", req.FunctionType)
+	}
+	if got := req.Metadata["owner"]; got != "ml" {
+		t.Fatalf("expected metadata owner=ml, got %v", got)
+	}
+	if len(req.Tags) != 2 {
+		t.Fatalf("expected 2 tags, got %d", len(req.Tags))
+	}
+
+	functionData, ok := req.FunctionData.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected function_data object, got %T", req.FunctionData)
+	}
+	if functionData["runtime"] != "node" {
+		t.Fatalf("expected function_data.runtime=node, got %v", functionData["runtime"])
+	}
+}
+
+func TestBuildCreateFunctionRequest_InvalidFunctionData(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := FunctionResourceModel{
+		ProjectID:    types.StringValue("project-123"),
+		Name:         types.StringValue("support-tool"),
+		FunctionData: types.StringValue(`{"runtime":`),
+	}
+
+	_, diags := buildCreateFunctionRequest(ctx, model)
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics for invalid function_data JSON")
+	}
+}
+
+func TestBuildUpdateFunctionRequest_SendsExplicitClearFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	state := FunctionResourceModel{
+		Name:           types.StringValue("support-tool"),
+		Slug:           types.StringValue("support-tool"),
+		Description:    types.StringValue("Support workflow tool"),
+		FunctionType:   types.StringValue("tool"),
+		FunctionData:   types.StringValue(`{"runtime":"node"}`),
+		FunctionSchema: types.StringValue(`{"type":"object"}`),
+		PromptData:     types.StringValue(`{"prompt":{"type":"chat"}}`),
+		Metadata: types.MapValueMust(types.StringType, map[string]attr.Value{
+			"owner": types.StringValue("ml"),
+		}),
+		Tags: types.SetValueMust(types.StringType, []attr.Value{
+			types.StringValue("prod"),
+		}),
+	}
+	plan := FunctionResourceModel{
+		Name:           types.StringValue("support-tool"),
+		Slug:           types.StringNull(),
+		Description:    types.StringNull(),
+		FunctionType:   types.StringNull(),
+		FunctionData:   types.StringValue(`{"runtime":"node"}`),
+		FunctionSchema: types.StringNull(),
+		PromptData:     types.StringNull(),
+		Metadata:       types.MapNull(types.StringType),
+		Tags:           types.SetNull(types.StringType),
+	}
+
+	req, diags := buildUpdateFunctionRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	for _, key := range []string{"slug", "description", "function_type", "function_schema", "prompt_data", "metadata", "tags"} {
+		if _, ok := payload[key]; !ok {
+			t.Fatalf("expected %q in payload, got %v", key, payload)
+		}
+	}
+
+	for _, key := range []string{"name", "function_data"} {
+		if _, ok := payload[key]; ok {
+			t.Fatalf("expected %q to be omitted, got %v", key, payload)
+		}
+	}
+
+	for _, key := range []string{"slug", "description", "function_type"} {
+		if got := string(payload[key]); got != `""` {
+			t.Fatalf("expected %q to clear as empty string, got %s", key, got)
+		}
+	}
+
+	for _, key := range []string{"function_schema", "prompt_data"} {
+		if got := string(payload[key]); got != `null` {
+			t.Fatalf("expected %q to clear as null, got %s", key, got)
+		}
+	}
+
+	if got := string(payload["metadata"]); got != `{}` {
+		t.Fatalf("expected metadata to clear as empty object, got %s", got)
+	}
+
+	if got := string(payload["tags"]); got != `[]` {
+		t.Fatalf("expected tags to clear as empty list, got %s", got)
+	}
+}
+
+func TestBuildUpdateFunctionRequest_OmitsUnknownOptionalFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	state := FunctionResourceModel{
+		Name:           types.StringValue("support-tool"),
+		Slug:           types.StringValue("support-tool"),
+		Description:    types.StringValue("Support workflow tool"),
+		FunctionType:   types.StringValue("tool"),
+		FunctionData:   types.StringValue(`{"runtime":"node"}`),
+		FunctionSchema: types.StringValue(`{"type":"object"}`),
+		PromptData:     types.StringValue(`{"prompt":{"type":"chat"}}`),
+		Metadata: types.MapValueMust(types.StringType, map[string]attr.Value{
+			"owner": types.StringValue("ml"),
+		}),
+		Tags: types.SetValueMust(types.StringType, []attr.Value{
+			types.StringValue("prod"),
+		}),
+	}
+	plan := FunctionResourceModel{
+		Name:           types.StringValue("support-tool-v2"),
+		Slug:           types.StringUnknown(),
+		Description:    types.StringUnknown(),
+		FunctionType:   types.StringUnknown(),
+		FunctionData:   types.StringValue(`{"runtime":"python"}`),
+		FunctionSchema: types.StringUnknown(),
+		PromptData:     types.StringUnknown(),
+		Metadata:       types.MapUnknown(types.StringType),
+		Tags:           types.SetUnknown(types.StringType),
+	}
+
+	req, diags := buildUpdateFunctionRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	for _, key := range []string{"name", "function_data"} {
+		if _, ok := payload[key]; !ok {
+			t.Fatalf("expected %q in payload, got %v", key, payload)
+		}
+	}
+
+	for _, key := range []string{"slug", "description", "function_type", "function_schema", "prompt_data", "metadata", "tags"} {
+		if _, ok := payload[key]; ok {
+			t.Fatalf("expected %q to be omitted, got %v", key, payload)
+		}
+	}
+}
+
+func TestSetFunctionResourceModel(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := FunctionResourceModel{}
+	function := &client.Function{
+		ID:             "function-123",
+		ProjectID:      "project-123",
+		Name:           "support-tool",
+		Slug:           "support-tool",
+		Description:    "Support workflow tool",
+		FunctionType:   "tool",
+		XactID:         "xact-1",
+		LogID:          "log-1",
+		Created:        "2026-03-12T10:00:00Z",
+		OrgID:          "org-123",
+		FunctionData:   map[string]interface{}{"runtime": "node"},
+		FunctionSchema: map[string]interface{}{"type": "object"},
+		PromptData:     map[string]interface{}{"prompt": map[string]interface{}{"type": "chat"}},
+		Origin:         map[string]interface{}{"source": "api"},
+		Metadata: map[string]interface{}{
+			"owner": "ml",
+			"tier":  "prod",
+		},
+		Tags: []string{"prod", "support"},
+	}
+
+	diags := setFunctionResourceModel(ctx, &model, function)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if model.ID.ValueString() != "function-123" {
+		t.Fatalf("expected id function-123, got %q", model.ID.ValueString())
+	}
+	if model.ProjectID.ValueString() != "project-123" {
+		t.Fatalf("expected project_id project-123, got %q", model.ProjectID.ValueString())
+	}
+	if model.FunctionType.ValueString() != "tool" {
+		t.Fatalf("expected function_type tool, got %q", model.FunctionType.ValueString())
+	}
+	if model.FunctionData.IsNull() {
+		t.Fatal("expected function_data to be set")
+	}
+	if model.Origin.IsNull() {
+		t.Fatal("expected origin to be set")
+	}
+	if model.Tags.IsNull() {
+		t.Fatal("expected tags to be set")
+	}
+}
+
+func TestFunctionResourceSchema_ProjectIDRequiresReplace(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	attrValue, ok := schemaResp.Schema.Attributes["project_id"]
+	if !ok {
+		t.Fatal("expected project_id attribute in schema")
+	}
+
+	projectIDAttr, ok := attrValue.(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("expected project_id to be schema.StringAttribute, got %T", attrValue)
+	}
+
+	if !projectIDAttr.IsRequired() {
+		t.Fatal("expected project_id to be required")
+	}
+	if len(projectIDAttr.PlanModifiers) == 0 {
+		t.Fatal("expected project_id to have plan modifiers")
+	}
+}
+
+func TestFunctionResourceSchema_JSONPayloadsSensitive(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	for _, name := range []string{"function_data", "function_schema", "prompt_data"} {
+		attrValue, ok := schemaResp.Schema.Attributes[name]
+		if !ok {
+			t.Fatalf("expected %s attribute in schema", name)
+		}
+
+		stringAttr, ok := attrValue.(schema.StringAttribute)
+		if !ok {
+			t.Fatalf("expected %s to be schema.StringAttribute, got %T", name, attrValue)
+		}
+
+		if !stringAttr.IsSensitive() {
+			t.Fatalf("expected %s to be sensitive", name)
+		}
+	}
+}
+
+func TestFunctionResourceSchema_MetadataAndTagsUseStateForUnknown(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	metadataValue, ok := schemaResp.Schema.Attributes["metadata"]
+	if !ok {
+		t.Fatal("expected metadata attribute in schema")
+	}
+
+	metadataAttr, ok := metadataValue.(schema.MapAttribute)
+	if !ok {
+		t.Fatalf("expected metadata to be schema.MapAttribute, got %T", metadataValue)
+	}
+
+	if len(metadataAttr.PlanModifiers) != 1 {
+		t.Fatalf("expected metadata to have exactly one plan modifier, got %d", len(metadataAttr.PlanModifiers))
+	}
+	if got := metadataAttr.PlanModifiers[0].Description(context.Background()); got != "Once set, the value of this attribute in state will not change." {
+		t.Fatalf("expected metadata to use state for unknown, got %q", got)
+	}
+
+	tagsValue, ok := schemaResp.Schema.Attributes["tags"]
+	if !ok {
+		t.Fatal("expected tags attribute in schema")
+	}
+
+	tagsAttr, ok := tagsValue.(schema.SetAttribute)
+	if !ok {
+		t.Fatalf("expected tags to be schema.SetAttribute, got %T", tagsValue)
+	}
+
+	if len(tagsAttr.PlanModifiers) != 1 {
+		t.Fatalf("expected tags to have exactly one plan modifier, got %d", len(tagsAttr.PlanModifiers))
+	}
+	if got := tagsAttr.PlanModifiers[0].Description(context.Background()); got != "Once set, the value of this attribute in state will not change." {
+		t.Fatalf("expected tags to use state for unknown, got %q", got)
+	}
+}
+
+func TestFunctionResourceSchema_XactIDDoesNotUseStateForUnknown(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	attrValue, ok := schemaResp.Schema.Attributes["xact_id"]
+	if !ok {
+		t.Fatal("expected xact_id attribute in schema")
+	}
+
+	stringAttr, ok := attrValue.(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("expected xact_id to be schema.StringAttribute, got %T", attrValue)
+	}
+
+	if len(stringAttr.PlanModifiers) != 0 {
+		t.Fatalf("expected xact_id to omit plan modifiers because it can change on update, got %d", len(stringAttr.PlanModifiers))
+	}
+}
+
+func TestProviderResourcesIncludeFunction(t *testing.T) {
+	t.Parallel()
+
+	p, ok := New("test")().(*BraintrustProvider)
+	if !ok {
+		t.Fatalf("expected *BraintrustProvider")
+	}
+
+	resourceFactories := p.Resources(context.Background())
+	resourceNames := make(map[string]struct{}, len(resourceFactories))
+
+	for _, factory := range resourceFactories {
+		r := factory()
+		resp := &resource.MetadataResponse{}
+		r.Metadata(context.Background(), resource.MetadataRequest{
+			ProviderTypeName: "braintrustdata",
+		}, resp)
+		resourceNames[resp.TypeName] = struct{}{}
+	}
+
+	if _, ok := resourceNames["braintrustdata_function"]; !ok {
+		t.Fatalf("expected braintrustdata_function to be registered")
+	}
+}

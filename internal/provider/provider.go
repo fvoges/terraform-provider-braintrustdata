@@ -137,6 +137,7 @@ func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Reso
 		NewDatasetResource,
 		NewEnvironmentVariableResource,
 		NewExperimentResource,
+		NewFunctionResource,
 		NewGroupResource,
 		NewOrgResource,
 		NewProjectResource,
