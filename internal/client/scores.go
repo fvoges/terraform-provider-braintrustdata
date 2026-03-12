@@ -25,6 +25,25 @@ type ProjectScore struct {
 	ScoreType   string      `json:"score_type,omitempty"`
 }
 
+// CreateScoreRequest represents a request to create a score.
+type CreateScoreRequest struct {
+	Categories  interface{} `json:"categories,omitempty"`
+	Config      interface{} `json:"config,omitempty"`
+	ProjectID   string      `json:"project_id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description,omitempty"`
+	ScoreType   string      `json:"score_type"`
+}
+
+// UpdateScoreRequest represents a request to update a score.
+type UpdateScoreRequest struct {
+	Categories  *interface{} `json:"categories,omitempty"`
+	Config      *interface{} `json:"config,omitempty"`
+	Name        *string      `json:"name,omitempty"`
+	Description *string      `json:"description,omitempty"`
+	ScoreType   *string      `json:"score_type,omitempty"`
+}
+
 // ListScoresOptions represents options for listing scores.
 type ListScoresOptions struct {
 	StartingAfter string
@@ -47,6 +66,17 @@ func scorePath(id string) string {
 	return "/v1/project_score/" + url.PathEscape(id)
 }
 
+// CreateScore creates a new score.
+func (c *Client) CreateScore(ctx context.Context, req *CreateScoreRequest) (*ProjectScore, error) {
+	var score ProjectScore
+	err := c.Do(ctx, "POST", "/v1/project_score", req, &score)
+	if err != nil {
+		return nil, err
+	}
+
+	return &score, nil
+}
+
 // GetScore retrieves a score by ID.
 func (c *Client) GetScore(ctx context.Context, id string) (*ProjectScore, error) {
 	id = strings.TrimSpace(id)
@@ -61,6 +91,32 @@ func (c *Client) GetScore(ctx context.Context, id string) (*ProjectScore, error)
 	}
 
 	return &score, nil
+}
+
+// UpdateScore updates an existing score.
+func (c *Client) UpdateScore(ctx context.Context, id string, req *UpdateScoreRequest) (*ProjectScore, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, ErrEmptyScoreID
+	}
+
+	var score ProjectScore
+	err := c.Do(ctx, "PATCH", scorePath(id), req, &score)
+	if err != nil {
+		return nil, err
+	}
+
+	return &score, nil
+}
+
+// DeleteScore deletes a score by ID.
+func (c *Client) DeleteScore(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrEmptyScoreID
+	}
+
+	return c.Do(ctx, "DELETE", scorePath(id), nil, nil)
 }
 
 // ListScores lists scores using API-native filters.
