@@ -429,11 +429,11 @@ func setScoreResourceModel(ctx context.Context, model *ScoreResourceModel, score
 	model.UserID = stringOrNull(score.UserID)
 	model.Created = stringOrNull(score.Created)
 
-	categories, fieldDiags := jsonEncodedOrNull("categories", score.Categories)
+	categories, fieldDiags := scoreJSONValueOrPreserve("categories", model.Categories, score.Categories)
 	diags.Append(fieldDiags...)
 	model.Categories = categories
 
-	config, configDiags := jsonEncodedOrNull("config", score.Config)
+	config, configDiags := scoreJSONValueOrPreserve("config", model.Config, score.Config)
 	diags.Append(configDiags...)
 	model.Config = config
 
@@ -449,6 +449,33 @@ func setScoreResourceModel(ctx context.Context, model *ScoreResourceModel, score
 
 	_ = ctx
 	return diags
+}
+
+func scoreJSONValueOrPreserve(fieldName string, current types.String, apiValue interface{}) (types.String, diag.Diagnostics) {
+	encoded, diags := jsonEncodedOrNull(fieldName, apiValue)
+	if diags.HasError() || encoded.IsNull() || current.IsNull() || current.IsUnknown() {
+		return encoded, diags
+	}
+
+	currentDecoded, err := decodeScoreJSONField(fieldName, current)
+	if err != nil {
+		return encoded, diags
+	}
+
+	apiDecoded, err := decodeScoreJSONField(fieldName, encoded)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Invalid %s", fieldName),
+			err.Error(),
+		)
+		return types.StringNull(), diags
+	}
+
+	if reflect.DeepEqual(currentDecoded, apiDecoded) {
+		return current, diags
+	}
+
+	return encoded, diags
 }
 
 func scoreStringPointer(v string) *string {

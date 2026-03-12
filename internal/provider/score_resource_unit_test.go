@@ -392,3 +392,67 @@ func TestSetScoreResourceModel_PreservesExplicitEmptyJSON(t *testing.T) {
 		t.Fatalf("expected empty config object, got %q", model.Config.ValueString())
 	}
 }
+
+func TestSetScoreResourceModel_PreservesEquivalentJSONStrings(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := ScoreResourceModel{
+		Categories: types.StringValue("[\n  \"good\",\n  \"bad\"\n]"),
+		Config:     types.StringValue("{\n  \"nested\": {\"b\": 2, \"a\": 1},\n  \"max\": 5\n}"),
+	}
+	score := &client.ProjectScore{
+		ID:         "score-4",
+		ProjectID:  "project-4",
+		Name:       "quality",
+		Categories: []string{"good", "bad"},
+		Config: map[string]interface{}{
+			"max": float64(5),
+			"nested": map[string]interface{}{
+				"a": float64(1),
+				"b": float64(2),
+			},
+		},
+	}
+
+	diags := setScoreResourceModel(ctx, &model, score)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if model.Categories.ValueString() != "[\n  \"good\",\n  \"bad\"\n]" {
+		t.Fatalf("expected categories formatting to be preserved, got %q", model.Categories.ValueString())
+	}
+	if model.Config.ValueString() != "{\n  \"nested\": {\"b\": 2, \"a\": 1},\n  \"max\": 5\n}" {
+		t.Fatalf("expected config formatting to be preserved, got %q", model.Config.ValueString())
+	}
+}
+
+func TestSetScoreResourceModel_ReplacesChangedJSONStrings(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := ScoreResourceModel{
+		Categories: types.StringValue("[\n  \"good\",\n  \"bad\"\n]"),
+		Config:     types.StringValue("{\"max\":5}"),
+	}
+	score := &client.ProjectScore{
+		ID:         "score-5",
+		ProjectID:  "project-5",
+		Name:       "quality",
+		Categories: []string{"great", "bad"},
+		Config:     map[string]interface{}{"max": float64(10)},
+	}
+
+	diags := setScoreResourceModel(ctx, &model, score)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if model.Categories.ValueString() != `["great","bad"]` {
+		t.Fatalf("expected categories to be refreshed from API, got %q", model.Categories.ValueString())
+	}
+	if model.Config.ValueString() != `{"max":10}` {
+		t.Fatalf("expected config to be refreshed from API, got %q", model.Config.ValueString())
+	}
+}
