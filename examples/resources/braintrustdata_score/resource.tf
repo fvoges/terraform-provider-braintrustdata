@@ -4,10 +4,10 @@ resource "braintrustdata_project" "evaluation" {
 }
 
 resource "braintrustdata_score" "quality" {
-  project_id   = braintrustdata_project.evaluation.id
-  name         = "quality"
-  score_type   = "free-form"
-  description  = "Free-form score for evaluator feedback"
+  project_id  = braintrustdata_project.evaluation.id
+  name        = "quality"
+  score_type  = "free-form"
+  description = "Free-form score for evaluator feedback"
 }
 
 output "score_id" {
