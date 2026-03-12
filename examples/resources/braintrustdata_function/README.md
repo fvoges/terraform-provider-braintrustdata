@@ -20,3 +20,5 @@ Run:
 Notes:
 - Placeholder values are marked with: # replace with real ID or wire from data/resource
 - If prerequisite objects do not exist, wire IDs from data sources/resources first.
+- Treat `function_data`, `function_schema`, and `prompt_data` as sensitive inputs. Do not embed API keys or other secrets in those JSON payloads.
+- Use `braintrustdata_environment_variable` to manage secret material that functions need at runtime.

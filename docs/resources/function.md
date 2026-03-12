@@ -18,6 +18,9 @@ resource "braintrustdata_project" "ai_functions" {
   description = "Project for function resource examples"
 }
 
+# Avoid embedding secrets directly in function_data, function_schema, or prompt_data.
+# Use braintrustdata_environment_variable for API keys and other secret material.
+
 # Prompt-backed function with metadata and tags.
 resource "braintrustdata_function" "support_tool" {
   project_id    = braintrustdata_project.ai_functions.id
@@ -62,17 +65,17 @@ output "function_id" {
 
 ### Required
 
-- `function_data` (String) The function data as a JSON-encoded string. Use `jsonencode()` for structured content.
+- `function_data` (String, Sensitive) The function data as a JSON-encoded string. Use `jsonencode()` for structured content. Avoid embedding secrets; prefer `braintrustdata_environment_variable` for secret material.
 - `name` (String) The function name.
 - `project_id` (String) The project ID that owns the function.
 
 ### Optional
 
 - `description` (String) A description of the function.
-- `function_schema` (String) The function schema as a JSON-encoded string.
+- `function_schema` (String, Sensitive) The function schema as a JSON-encoded string. Avoid embedding secrets; prefer `braintrustdata_environment_variable` for secret material.
 - `function_type` (String) The function type, such as `tool`, `scorer`, or `workflow`.
 - `metadata` (Map of String) Metadata associated with the function as key-value pairs.
-- `prompt_data` (String) Prompt data for prompt-backed functions as a JSON-encoded string.
+- `prompt_data` (String, Sensitive) Prompt data for prompt-backed functions as a JSON-encoded string. Avoid embedding secrets; prefer `braintrustdata_environment_variable` for secret material.
 - `slug` (String) The function slug. Defaults to a slugified form of `name` when omitted.
 - `tags` (Set of String) Tags associated with the function.
 

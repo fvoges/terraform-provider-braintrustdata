@@ -77,7 +77,86 @@ func TestBuildCreateFunctionRequest_InvalidFunctionData(t *testing.T) {
 	}
 }
 
-func TestBuildUpdateFunctionRequest_OnlyChangedFields(t *testing.T) {
+func TestBuildUpdateFunctionRequest_SendsExplicitClearFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	state := FunctionResourceModel{
+		Name:           types.StringValue("support-tool"),
+		Slug:           types.StringValue("support-tool"),
+		Description:    types.StringValue("Support workflow tool"),
+		FunctionType:   types.StringValue("tool"),
+		FunctionData:   types.StringValue(`{"runtime":"node"}`),
+		FunctionSchema: types.StringValue(`{"type":"object"}`),
+		PromptData:     types.StringValue(`{"prompt":{"type":"chat"}}`),
+		Metadata: types.MapValueMust(types.StringType, map[string]attr.Value{
+			"owner": types.StringValue("ml"),
+		}),
+		Tags: types.SetValueMust(types.StringType, []attr.Value{
+			types.StringValue("prod"),
+		}),
+	}
+	plan := FunctionResourceModel{
+		Name:           types.StringValue("support-tool"),
+		Slug:           types.StringNull(),
+		Description:    types.StringNull(),
+		FunctionType:   types.StringNull(),
+		FunctionData:   types.StringValue(`{"runtime":"node"}`),
+		FunctionSchema: types.StringNull(),
+		PromptData:     types.StringNull(),
+		Metadata:       types.MapNull(types.StringType),
+		Tags:           types.SetNull(types.StringType),
+	}
+
+	req, diags := buildUpdateFunctionRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	for _, key := range []string{"slug", "description", "function_type", "function_schema", "prompt_data", "metadata", "tags"} {
+		if _, ok := payload[key]; !ok {
+			t.Fatalf("expected %q in payload, got %v", key, payload)
+		}
+	}
+
+	for _, key := range []string{"name", "function_data"} {
+		if _, ok := payload[key]; ok {
+			t.Fatalf("expected %q to be omitted, got %v", key, payload)
+		}
+	}
+
+	for _, key := range []string{"slug", "description", "function_type"} {
+		if got := string(payload[key]); got != `""` {
+			t.Fatalf("expected %q to clear as empty string, got %s", key, got)
+		}
+	}
+
+	for _, key := range []string{"function_schema", "prompt_data"} {
+		if got := string(payload[key]); got != `null` {
+			t.Fatalf("expected %q to clear as null, got %s", key, got)
+		}
+	}
+
+	if got := string(payload["metadata"]); got != `{}` {
+		t.Fatalf("expected metadata to clear as empty object, got %s", got)
+	}
+
+	if got := string(payload["tags"]); got != `[]` {
+		t.Fatalf("expected tags to clear as empty list, got %s", got)
+	}
+}
+
+func TestBuildUpdateFunctionRequest_OmitsUnknownOptionalFields(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -98,19 +177,14 @@ func TestBuildUpdateFunctionRequest_OnlyChangedFields(t *testing.T) {
 	}
 	plan := FunctionResourceModel{
 		Name:           types.StringValue("support-tool-v2"),
-		Slug:           types.StringNull(),
-		Description:    types.StringNull(),
-		FunctionType:   types.StringValue("tool"),
+		Slug:           types.StringUnknown(),
+		Description:    types.StringUnknown(),
+		FunctionType:   types.StringUnknown(),
 		FunctionData:   types.StringValue(`{"runtime":"python"}`),
 		FunctionSchema: types.StringUnknown(),
 		PromptData:     types.StringUnknown(),
-		Metadata: types.MapValueMust(types.StringType, map[string]attr.Value{
-			"owner": types.StringValue("platform"),
-		}),
-		Tags: types.SetValueMust(types.StringType, []attr.Value{
-			types.StringValue("prod"),
-			types.StringValue("v2"),
-		}),
+		Metadata:       types.MapUnknown(types.StringType),
+		Tags:           types.SetUnknown(types.StringType),
 	}
 
 	req, diags := buildUpdateFunctionRequest(ctx, plan, state)
@@ -128,13 +202,13 @@ func TestBuildUpdateFunctionRequest_OnlyChangedFields(t *testing.T) {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 
-	for _, key := range []string{"name", "function_data", "metadata", "tags"} {
+	for _, key := range []string{"name", "function_data"} {
 		if _, ok := payload[key]; !ok {
 			t.Fatalf("expected %q in payload, got %v", key, payload)
 		}
 	}
 
-	for _, key := range []string{"slug", "description", "function_schema", "prompt_data", "function_type"} {
+	for _, key := range []string{"slug", "description", "function_type", "function_schema", "prompt_data", "metadata", "tags"} {
 		if _, ok := payload[key]; ok {
 			t.Fatalf("expected %q to be omitted, got %v", key, payload)
 		}
@@ -215,6 +289,52 @@ func TestFunctionResourceSchema_ProjectIDRequiresReplace(t *testing.T) {
 	}
 	if len(projectIDAttr.PlanModifiers) == 0 {
 		t.Fatal("expected project_id to have plan modifiers")
+	}
+}
+
+func TestFunctionResourceSchema_JSONPayloadsSensitive(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	for _, name := range []string{"function_data", "function_schema", "prompt_data"} {
+		attrValue, ok := schemaResp.Schema.Attributes[name]
+		if !ok {
+			t.Fatalf("expected %s attribute in schema", name)
+		}
+
+		stringAttr, ok := attrValue.(schema.StringAttribute)
+		if !ok {
+			t.Fatalf("expected %s to be schema.StringAttribute, got %T", name, attrValue)
+		}
+
+		if !stringAttr.IsSensitive() {
+			t.Fatalf("expected %s to be sensitive", name)
+		}
+	}
+}
+
+func TestFunctionResourceSchema_XactIDDoesNotUseStateForUnknown(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	attrValue, ok := schemaResp.Schema.Attributes["xact_id"]
+	if !ok {
+		t.Fatal("expected xact_id attribute in schema")
+	}
+
+	stringAttr, ok := attrValue.(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("expected xact_id to be schema.StringAttribute, got %T", attrValue)
+	}
+
+	if len(stringAttr.PlanModifiers) != 0 {
+		t.Fatalf("expected xact_id to omit plan modifiers because it can change on update, got %d", len(stringAttr.PlanModifiers))
 	}
 }
 

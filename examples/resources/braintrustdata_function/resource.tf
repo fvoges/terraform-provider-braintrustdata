@@ -3,6 +3,9 @@ resource "braintrustdata_project" "ai_functions" {
   description = "Project for function resource examples"
 }
 
+# Avoid embedding secrets directly in function_data, function_schema, or prompt_data.
+# Use braintrustdata_environment_variable for API keys and other secret material.
+
 # Prompt-backed function with metadata and tags.
 resource "braintrustdata_function" "support_tool" {
   project_id    = braintrustdata_project.ai_functions.id

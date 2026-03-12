@@ -104,12 +104,14 @@ func (r *FunctionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"function_data": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The function data as a JSON-encoded string. Use `jsonencode()` for structured content.",
+				Sensitive:           true,
+				MarkdownDescription: "The function data as a JSON-encoded string. Use `jsonencode()` for structured content. Avoid embedding secrets; prefer `braintrustdata_environment_variable` for secret material.",
 			},
 			"function_schema": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "The function schema as a JSON-encoded string.",
+				Sensitive:           true,
+				MarkdownDescription: "The function schema as a JSON-encoded string. Avoid embedding secrets; prefer `braintrustdata_environment_variable` for secret material.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -117,7 +119,8 @@ func (r *FunctionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"prompt_data": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Prompt data for prompt-backed functions as a JSON-encoded string.",
+				Sensitive:           true,
+				MarkdownDescription: "Prompt data for prompt-backed functions as a JSON-encoded string. Avoid embedding secrets; prefer `braintrustdata_environment_variable` for secret material.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -137,9 +140,6 @@ func (r *FunctionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"xact_id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The transaction ID associated with the function.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
@@ -396,15 +396,15 @@ func buildUpdateFunctionRequest(ctx context.Context, plan, state FunctionResourc
 		req.Name = functionStringPtr(plan.Name.ValueString())
 	}
 
-	if !plan.Slug.IsNull() && !plan.Slug.IsUnknown() && !plan.Slug.Equal(state.Slug) {
+	if !plan.Slug.IsUnknown() && !plan.Slug.Equal(state.Slug) {
 		req.Slug = functionStringPtr(plan.Slug.ValueString())
 	}
 
-	if !plan.Description.IsNull() && !plan.Description.IsUnknown() && !plan.Description.Equal(state.Description) {
+	if !plan.Description.IsUnknown() && !plan.Description.Equal(state.Description) {
 		req.Description = functionStringPtr(plan.Description.ValueString())
 	}
 
-	if !plan.FunctionType.IsNull() && !plan.FunctionType.IsUnknown() && !plan.FunctionType.Equal(state.FunctionType) {
+	if !plan.FunctionType.IsUnknown() && !plan.FunctionType.Equal(state.FunctionType) {
 		req.FunctionType = functionStringPtr(plan.FunctionType.ValueString())
 	}
 
@@ -417,7 +417,7 @@ func buildUpdateFunctionRequest(ctx context.Context, plan, state FunctionResourc
 		req.FunctionData = functionInterfacePtr(functionData)
 	}
 
-	if !plan.FunctionSchema.IsNull() && !plan.FunctionSchema.IsUnknown() && !plan.FunctionSchema.Equal(state.FunctionSchema) {
+	if !plan.FunctionSchema.IsUnknown() && !plan.FunctionSchema.Equal(state.FunctionSchema) {
 		functionSchema, fieldDiags := optionalFunctionJSONField("function_schema", plan.FunctionSchema)
 		diags.Append(fieldDiags...)
 		if diags.HasError() {
@@ -426,7 +426,7 @@ func buildUpdateFunctionRequest(ctx context.Context, plan, state FunctionResourc
 		req.FunctionSchema = functionInterfacePtr(functionSchema)
 	}
 
-	if !plan.PromptData.IsNull() && !plan.PromptData.IsUnknown() && !plan.PromptData.Equal(state.PromptData) {
+	if !plan.PromptData.IsUnknown() && !plan.PromptData.Equal(state.PromptData) {
 		promptData, fieldDiags := optionalFunctionJSONField("prompt_data", plan.PromptData)
 		diags.Append(fieldDiags...)
 		if diags.HasError() {
@@ -435,22 +435,30 @@ func buildUpdateFunctionRequest(ctx context.Context, plan, state FunctionResourc
 		req.PromptData = functionInterfacePtr(promptData)
 	}
 
-	if !plan.Metadata.IsNull() && !plan.Metadata.IsUnknown() && !plan.Metadata.Equal(state.Metadata) {
-		metadata, metaDiags := extractMetadata(ctx, plan.Metadata)
-		diags.Append(metaDiags...)
-		if diags.HasError() {
-			return nil, diags
+	if !plan.Metadata.IsUnknown() && !plan.Metadata.Equal(state.Metadata) {
+		if plan.Metadata.IsNull() {
+			req.Metadata = functionMapPtr(map[string]interface{}{})
+		} else {
+			metadata, metaDiags := extractMetadata(ctx, plan.Metadata)
+			diags.Append(metaDiags...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			req.Metadata = functionMapPtr(metadata)
 		}
-		req.Metadata = functionMapPtr(metadata)
 	}
 
-	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() && !plan.Tags.Equal(state.Tags) {
-		tags, tagDiags := extractTags(ctx, plan.Tags)
-		diags.Append(tagDiags...)
-		if diags.HasError() {
-			return nil, diags
+	if !plan.Tags.IsUnknown() && !plan.Tags.Equal(state.Tags) {
+		if plan.Tags.IsNull() {
+			req.Tags = functionStringSlicePtr([]string{})
+		} else {
+			tags, tagDiags := extractTags(ctx, plan.Tags)
+			diags.Append(tagDiags...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			req.Tags = functionStringSlicePtr(tags)
 		}
-		req.Tags = functionStringSlicePtr(tags)
 	}
 
 	return req, diags
