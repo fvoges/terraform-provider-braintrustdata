@@ -23,10 +23,10 @@ resource "braintrustdata_project" "ai_functions" {
 
 # Prompt-backed function with metadata and tags.
 resource "braintrustdata_function" "support_tool" {
-  project_id    = braintrustdata_project.ai_functions.id
-  name          = "support-tool"
-  slug          = "support-tool"
-  description   = "Prompt-backed support tool"
+  project_id  = braintrustdata_project.ai_functions.id
+  name        = "support-tool"
+  slug        = "support-tool"
+  description = "Prompt-backed support tool"
 
   function_data = jsonencode({
     type = "prompt"
