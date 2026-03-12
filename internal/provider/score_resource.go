@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
@@ -320,29 +321,93 @@ func buildUpdateScoreRequest(_ context.Context, plan, state ScoreResourceModel) 
 		req.Description = scoreStringPointer(plan.Description.ValueString())
 	}
 
-	if !plan.Categories.IsUnknown() && !plan.Categories.Equal(state.Categories) {
-		categories, fieldDiags := optionalScoreJSONField("categories", plan.Categories)
-		diags.Append(fieldDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if categories != nil {
-			req.Categories = scoreInterfacePointer(categories)
-		}
+	categoriesChanged, categories, fieldDiags := scoreJSONFieldChanged("categories", plan.Categories, state.Categories)
+	diags.Append(fieldDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if categoriesChanged {
+		req.Categories = scoreInterfacePointer(categories)
 	}
 
-	if !plan.Config.IsUnknown() && !plan.Config.Equal(state.Config) {
-		config, fieldDiags := optionalScoreJSONField("config", plan.Config)
-		diags.Append(fieldDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if config != nil {
-			req.Config = scoreInterfacePointer(config)
-		}
+	configChanged, config, fieldDiags := scoreJSONFieldChanged("config", plan.Config, state.Config)
+	diags.Append(fieldDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if configChanged {
+		req.Config = scoreInterfacePointer(config)
 	}
 
 	return req, diags
+}
+
+func scoreJSONFieldChanged(fieldName string, plan, state types.String) (bool, interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if plan.IsUnknown() {
+		return false, nil, diags
+	}
+	if plan.IsNull() {
+		return !state.IsNull(), nil, diags
+	}
+
+	planDecoded, fieldDiags := optionalScoreJSONField(fieldName, plan)
+	diags.Append(fieldDiags...)
+	if diags.HasError() {
+		return false, nil, diags
+	}
+
+	if state.IsNull() || state.IsUnknown() {
+		return true, planDecoded, diags
+	}
+
+	stateDecoded, err := decodeScoreJSONField(fieldName, state)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Invalid %s", fieldName),
+			err.Error(),
+		)
+		return false, nil, diags
+	}
+
+	if reflect.DeepEqual(planDecoded, stateDecoded) {
+		return false, nil, diags
+	}
+
+	return true, planDecoded, diags
+}
+
+func decodeScoreJSONField(fieldName string, value types.String) (interface{}, error) {
+	if value.IsNull() || value.IsUnknown() || strings.TrimSpace(value.ValueString()) == "" {
+		return nil, fmt.Errorf("%s must be valid JSON and cannot be empty", fieldName)
+	}
+
+	var decoded interface{}
+	if err := json.Unmarshal([]byte(value.ValueString()), &decoded); err != nil {
+		return nil, fmt.Errorf("%s must be valid JSON: %w", fieldName, err)
+	}
+
+	return decoded, nil
+}
+
+func optionalScoreJSONField(fieldName string, value types.String) (interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if value.IsNull() || value.IsUnknown() {
+		return nil, diags
+	}
+
+	decoded, err := decodeScoreJSONField(fieldName, value)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Invalid %s", fieldName),
+			err.Error(),
+		)
+		return nil, diags
+	}
+
+	return decoded, diags
 }
 
 func hasScoreUpdateChanges(req *client.UpdateScoreRequest) bool {
@@ -384,32 +449,6 @@ func setScoreResourceModel(ctx context.Context, model *ScoreResourceModel, score
 
 	_ = ctx
 	return diags
-}
-
-func optionalScoreJSONField(fieldName string, value types.String) (interface{}, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if value.IsNull() || value.IsUnknown() {
-		return nil, diags
-	}
-	if strings.TrimSpace(value.ValueString()) == "" {
-		diags.AddError(
-			fmt.Sprintf("Invalid %s", fieldName),
-			fmt.Sprintf("%s must be valid JSON and cannot be empty", fieldName),
-		)
-		return nil, diags
-	}
-
-	var decoded interface{}
-	if err := json.Unmarshal([]byte(value.ValueString()), &decoded); err != nil {
-		diags.AddError(
-			fmt.Sprintf("Invalid %s", fieldName),
-			fmt.Sprintf("%s must be valid JSON: %s", fieldName, err),
-		)
-		return nil, diags
-	}
-
-	return decoded, diags
 }
 
 func scoreStringPointer(v string) *string {

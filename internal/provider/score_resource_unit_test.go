@@ -117,6 +117,74 @@ func TestBuildUpdateScoreRequest_OnlyChangedFields(t *testing.T) {
 	}
 }
 
+func TestBuildUpdateScoreRequest_ClearsJSONFieldsWithExplicitNull(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	state := ScoreResourceModel{
+		Categories: types.StringValue(`["good","bad"]`),
+		Config:     types.StringValue(`{"max":5}`),
+	}
+	plan := ScoreResourceModel{
+		Categories: types.StringNull(),
+		Config:     types.StringNull(),
+	}
+
+	req, diags := buildUpdateScoreRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	for _, key := range []string{"categories", "config"} {
+		raw, ok := payload[key]
+		if !ok {
+			t.Fatalf("expected %q in payload, got %v", key, payload)
+		}
+		if string(raw) != "null" {
+			t.Fatalf("expected %q to be null, got %s", key, raw)
+		}
+	}
+}
+
+func TestBuildUpdateScoreRequest_SemanticallyEquivalentJSONNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	state := ScoreResourceModel{
+		Categories: types.StringValue(`["good","bad"]`),
+		Config:     types.StringValue(`{"max":5,"nested":{"a":1,"b":2}}`),
+	}
+	plan := ScoreResourceModel{
+		Categories: types.StringValue("[\n  \"good\",\n  \"bad\"\n]"),
+		Config:     types.StringValue("{\n  \"nested\": {\"b\": 2, \"a\": 1},\n  \"max\": 5\n}"),
+	}
+
+	req, diags := buildUpdateScoreRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if req.Categories != nil {
+		t.Fatalf("expected categories to be omitted for semantic no-op, got %v", *req.Categories)
+	}
+	if req.Config != nil {
+		t.Fatalf("expected config to be omitted for semantic no-op, got %v", *req.Config)
+	}
+	if hasScoreUpdateChanges(req) {
+		t.Fatalf("expected no update changes, got %+v", req)
+	}
+}
+
 func TestSetScoreResourceModel(t *testing.T) {
 	t.Parallel()
 
