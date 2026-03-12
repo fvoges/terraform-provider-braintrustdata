@@ -316,6 +316,48 @@ func TestFunctionResourceSchema_JSONPayloadsSensitive(t *testing.T) {
 	}
 }
 
+func TestFunctionResourceSchema_MetadataAndTagsUseStateForUnknown(t *testing.T) {
+	t.Parallel()
+
+	r := NewFunctionResource().(*FunctionResource)
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	metadataValue, ok := schemaResp.Schema.Attributes["metadata"]
+	if !ok {
+		t.Fatal("expected metadata attribute in schema")
+	}
+
+	metadataAttr, ok := metadataValue.(schema.MapAttribute)
+	if !ok {
+		t.Fatalf("expected metadata to be schema.MapAttribute, got %T", metadataValue)
+	}
+
+	if len(metadataAttr.PlanModifiers) != 1 {
+		t.Fatalf("expected metadata to have exactly one plan modifier, got %d", len(metadataAttr.PlanModifiers))
+	}
+	if got := metadataAttr.PlanModifiers[0].Description(context.Background()); got != "Once set, the value of this attribute in state will not change." {
+		t.Fatalf("expected metadata to use state for unknown, got %q", got)
+	}
+
+	tagsValue, ok := schemaResp.Schema.Attributes["tags"]
+	if !ok {
+		t.Fatal("expected tags attribute in schema")
+	}
+
+	tagsAttr, ok := tagsValue.(schema.SetAttribute)
+	if !ok {
+		t.Fatalf("expected tags to be schema.SetAttribute, got %T", tagsValue)
+	}
+
+	if len(tagsAttr.PlanModifiers) != 1 {
+		t.Fatalf("expected tags to have exactly one plan modifier, got %d", len(tagsAttr.PlanModifiers))
+	}
+	if got := tagsAttr.PlanModifiers[0].Description(context.Background()); got != "Once set, the value of this attribute in state will not change." {
+		t.Fatalf("expected tags to use state for unknown, got %q", got)
+	}
+}
+
 func TestFunctionResourceSchema_XactIDDoesNotUseStateForUnknown(t *testing.T) {
 	t.Parallel()
 
