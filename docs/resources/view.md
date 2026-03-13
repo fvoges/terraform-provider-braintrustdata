@@ -57,8 +57,8 @@ output "view_id" {
 
 ### Optional
 
-- `options` (String) Optional view options as a JSON-encoded object. Removing this from configuration sends an explicit null clear on update, but current backend behavior may ignore the clear and return the existing value.
-- `view_data` (String) Optional view definition as a JSON-encoded object. Removing this from configuration sends an explicit null clear on update, but current backend behavior may ignore the clear and return the existing value.
+- `options` (String) Optional view options as a JSON-encoded object. Setting this attribute to null sends an explicit clear on update. Omitting this attribute from configuration may preserve the prior API value because it is Optional + Computed with UseStateForUnknown semantics.
+- `view_data` (String) Optional view definition as a JSON-encoded object. Setting this attribute to null sends an explicit clear on update. Omitting this attribute from configuration may preserve the prior API value because it is Optional + Computed with UseStateForUnknown semantics.
 
 ### Read-Only
 

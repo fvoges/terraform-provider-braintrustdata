@@ -49,7 +49,7 @@ type CreateViewRequest struct {
 	Options    map[string]interface{} `json:"options,omitempty"`
 	ViewData   map[string]interface{} `json:"view_data,omitempty"`
 	ObjectID   string                 `json:"object_id"`
-	Name       string                 `json:"name,omitempty"`
+	Name       string                 `json:"name"`
 	ObjectType ACLObjectType          `json:"object_type"`
 	ViewType   ViewType               `json:"view_type"`
 }
