@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // ErrEmptyViewID is returned when a view ID is empty.
@@ -42,6 +44,69 @@ type View struct {
 	UserID     string                 `json:"user_id,omitempty"`
 }
 
+// CreateViewRequest represents a request to create a view.
+type CreateViewRequest struct {
+	Options    map[string]interface{} `json:"options,omitempty"`
+	ViewData   map[string]interface{} `json:"view_data,omitempty"`
+	ObjectID   string                 `json:"object_id"`
+	Name       string                 `json:"name,omitempty"`
+	ObjectType ACLObjectType          `json:"object_type"`
+	ViewType   ViewType               `json:"view_type"`
+}
+
+// UpdateViewRequest represents a request to update a view.
+type UpdateViewRequest struct {
+	Options    *json.RawMessage `json:"-"`
+	ViewData   *json.RawMessage `json:"-"`
+	ObjectID   string           `json:"object_id"`
+	Name       *string          `json:"name,omitempty"`
+	ObjectType ACLObjectType    `json:"object_type"`
+}
+
+// DeleteViewRequest represents a request to delete a view.
+type DeleteViewRequest struct {
+	ObjectID   string        `json:"object_id"`
+	ObjectType ACLObjectType `json:"object_type"`
+}
+
+func viewJSONRawMessage(body []byte) *json.RawMessage {
+	msg := json.RawMessage(body)
+	return &msg
+}
+
+func viewJSONNull() *json.RawMessage {
+	return viewJSONRawMessage([]byte("null"))
+}
+
+func viewJSONObjectRawMessage(v map[string]interface{}) (*json.RawMessage, error) {
+	body, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	return viewJSONRawMessage(body), nil
+}
+
+// MarshalJSON preserves the distinction between omitted and explicit null JSON fields.
+func (r UpdateViewRequest) MarshalJSON() ([]byte, error) {
+	payload := map[string]interface{}{
+		"object_id":   r.ObjectID,
+		"object_type": r.ObjectType,
+	}
+
+	if r.Name != nil {
+		payload["name"] = r.Name
+	}
+	if r.Options != nil {
+		payload["options"] = json.RawMessage(*r.Options)
+	}
+	if r.ViewData != nil {
+		payload["view_data"] = json.RawMessage(*r.ViewData)
+	}
+
+	return json.Marshal(payload)
+}
+
 // GetViewOptions represents query options for retrieving a view by ID.
 type GetViewOptions struct {
 	ObjectID   string
@@ -65,13 +130,29 @@ type ListViewsResponse struct {
 	Objects []View `json:"objects"`
 }
 
+func viewPath(id string) string {
+	return "/v1/view/" + url.PathEscape(id)
+}
+
+// CreateView creates a new view.
+func (c *Client) CreateView(ctx context.Context, req *CreateViewRequest) (*View, error) {
+	var view View
+	err := c.Do(ctx, "POST", "/v1/view", req, &view)
+	if err != nil {
+		return nil, err
+	}
+
+	return &view, nil
+}
+
 // GetView retrieves a view by ID.
 func (c *Client) GetView(ctx context.Context, id string, opts *GetViewOptions) (*View, error) {
+	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, ErrEmptyViewID
 	}
 
-	path := "/v1/view/" + url.PathEscape(id)
+	path := viewPath(id)
 	if opts != nil {
 		params := url.Values{}
 		if opts.ObjectID != "" {
@@ -93,6 +174,32 @@ func (c *Client) GetView(ctx context.Context, id string, opts *GetViewOptions) (
 	}
 
 	return &view, nil
+}
+
+// UpdateView updates an existing view.
+func (c *Client) UpdateView(ctx context.Context, id string, req *UpdateViewRequest) (*View, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, ErrEmptyViewID
+	}
+
+	var view View
+	err := c.Do(ctx, "PATCH", viewPath(id), req, &view)
+	if err != nil {
+		return nil, err
+	}
+
+	return &view, nil
+}
+
+// DeleteView deletes a view.
+func (c *Client) DeleteView(ctx context.Context, id string, req *DeleteViewRequest) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrEmptyViewID
+	}
+
+	return c.Do(ctx, "DELETE", viewPath(id), req, nil)
 }
 
 // ListViews lists views using API-native filters.
