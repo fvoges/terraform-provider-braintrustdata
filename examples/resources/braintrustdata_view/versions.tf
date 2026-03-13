@@ -3,8 +3,8 @@ terraform {
 
   required_providers {
     braintrustdata = {
-      source  = "registry.terraform.io/fvoges/braintrustdata"
-      version = ">= 0.1.0"
+      source  = "braintrustdata/braintrustdata"
+      version = "= 0.1.0"
     }
   }
 }

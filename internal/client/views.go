@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // ErrEmptyViewID is returned when a view ID is empty.
@@ -146,6 +147,7 @@ func (c *Client) CreateView(ctx context.Context, req *CreateViewRequest) (*View,
 
 // GetView retrieves a view by ID.
 func (c *Client) GetView(ctx context.Context, id string, opts *GetViewOptions) (*View, error) {
+	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, ErrEmptyViewID
 	}
@@ -176,6 +178,7 @@ func (c *Client) GetView(ctx context.Context, id string, opts *GetViewOptions) (
 
 // UpdateView updates an existing view.
 func (c *Client) UpdateView(ctx context.Context, id string, req *UpdateViewRequest) (*View, error) {
+	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, ErrEmptyViewID
 	}
@@ -191,6 +194,7 @@ func (c *Client) UpdateView(ctx context.Context, id string, req *UpdateViewReque
 
 // DeleteView deletes a view.
 func (c *Client) DeleteView(ctx context.Context, id string, req *DeleteViewRequest) error {
+	id = strings.TrimSpace(id)
 	if id == "" {
 		return ErrEmptyViewID
 	}
