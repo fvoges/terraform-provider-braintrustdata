@@ -80,11 +80,53 @@ func TestBuildUpdateViewRequest(t *testing.T) {
 	if req.Name == nil || *req.Name != "updated" {
 		t.Fatalf("expected updated name pointer, got %#v", req.Name)
 	}
-	if got := req.Options["freezeColumns"]; got != true {
+	options := decodeViewJSONRawMessage(t, req.Options)
+	if got := options["freezeColumns"]; got != true {
 		t.Fatalf("expected options.freezeColumns true, got %v", got)
 	}
 	if !hasViewUpdateChanges(req) {
 		t.Fatal("expected update request to contain mutable changes")
+	}
+}
+
+func TestBuildUpdateViewRequest_ExplicitNullClears(t *testing.T) {
+	t.Parallel()
+
+	req, diags := buildUpdateViewRequest(ViewResourceModel{
+		ObjectID:   types.StringValue("project-123"),
+		ObjectType: types.StringValue("project"),
+		Name:       types.StringValue("default"),
+		Options:    types.StringNull(),
+		ViewData:   types.StringNull(),
+	}, ViewResourceModel{
+		ObjectID:   types.StringValue("project-123"),
+		ObjectType: types.StringValue("project"),
+		Name:       types.StringValue("default"),
+		Options:    types.StringValue(`{"freezeColumns":false}`),
+		ViewData:   types.StringValue(`{"search":{"match":[]}}`),
+	})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if got := string(payload["options"]); got != "null" {
+		t.Fatalf("expected options null clear, got %s", got)
+	}
+	if got := string(payload["view_data"]); got != "null" {
+		t.Fatalf("expected view_data null clear, got %s", got)
+	}
+	if !hasViewUpdateChanges(req) {
+		t.Fatal("expected explicit clears to count as update changes")
 	}
 }
 
@@ -122,6 +164,46 @@ func TestBuildUpdateViewRequest_OmitsUnknownOptionalFields(t *testing.T) {
 		if _, ok := payload[key]; ok {
 			t.Fatalf("expected %q to be omitted when plan value is unknown", key)
 		}
+	}
+}
+
+func TestBuildUpdateViewRequest_NullToNullNoop(t *testing.T) {
+	t.Parallel()
+
+	req, diags := buildUpdateViewRequest(ViewResourceModel{
+		ObjectID:   types.StringValue("project-123"),
+		ObjectType: types.StringValue("project"),
+		Name:       types.StringValue("default"),
+		Options:    types.StringNull(),
+		ViewData:   types.StringNull(),
+	}, ViewResourceModel{
+		ObjectID:   types.StringValue("project-123"),
+		ObjectType: types.StringValue("project"),
+		Name:       types.StringValue("default"),
+		Options:    types.StringNull(),
+		ViewData:   types.StringNull(),
+	})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	for _, key := range []string{"name", "options", "view_data"} {
+		if _, ok := payload[key]; ok {
+			t.Fatalf("expected %q to be omitted when state and plan are both null", key)
+		}
+	}
+	if hasViewUpdateChanges(req) {
+		t.Fatal("expected null-to-null transition to be a no-op")
 	}
 }
 
@@ -219,4 +301,19 @@ func TestProviderResourcesIncludeView(t *testing.T) {
 	if _, ok := resourceNames["braintrustdata_view"]; !ok {
 		t.Fatalf("expected braintrustdata_view to be registered")
 	}
+}
+
+func decodeViewJSONRawMessage(t *testing.T, raw *json.RawMessage) map[string]interface{} {
+	t.Helper()
+
+	if raw == nil {
+		t.Fatal("expected JSON raw message, got nil")
+	}
+
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(*raw, &decoded); err != nil {
+		t.Fatalf("unmarshal raw message: %v", err)
+	}
+
+	return decoded
 }

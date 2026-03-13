@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -54,17 +55,55 @@ type CreateViewRequest struct {
 
 // UpdateViewRequest represents a request to update a view.
 type UpdateViewRequest struct {
-	Options    map[string]interface{} `json:"options,omitempty"`
-	ViewData   map[string]interface{} `json:"view_data,omitempty"`
-	ObjectID   string                 `json:"object_id"`
-	Name       *string                `json:"name,omitempty"`
-	ObjectType ACLObjectType          `json:"object_type"`
+	Options    *json.RawMessage `json:"-"`
+	ViewData   *json.RawMessage `json:"-"`
+	ObjectID   string           `json:"object_id"`
+	Name       *string          `json:"name,omitempty"`
+	ObjectType ACLObjectType    `json:"object_type"`
 }
 
 // DeleteViewRequest represents a request to delete a view.
 type DeleteViewRequest struct {
 	ObjectID   string        `json:"object_id"`
 	ObjectType ACLObjectType `json:"object_type"`
+}
+
+func viewJSONRawMessage(body []byte) *json.RawMessage {
+	msg := json.RawMessage(body)
+	return &msg
+}
+
+func viewJSONNull() *json.RawMessage {
+	return viewJSONRawMessage([]byte("null"))
+}
+
+func viewJSONObjectRawMessage(v map[string]interface{}) (*json.RawMessage, error) {
+	body, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	return viewJSONRawMessage(body), nil
+}
+
+// MarshalJSON preserves the distinction between omitted and explicit null JSON fields.
+func (r UpdateViewRequest) MarshalJSON() ([]byte, error) {
+	payload := map[string]interface{}{
+		"object_id":   r.ObjectID,
+		"object_type": r.ObjectType,
+	}
+
+	if r.Name != nil {
+		payload["name"] = r.Name
+	}
+	if r.Options != nil {
+		payload["options"] = json.RawMessage(*r.Options)
+	}
+	if r.ViewData != nil {
+		payload["view_data"] = json.RawMessage(*r.ViewData)
+	}
+
+	return json.Marshal(payload)
 }
 
 // GetViewOptions represents query options for retrieving a view by ID.

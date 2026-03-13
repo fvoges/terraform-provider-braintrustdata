@@ -403,6 +403,15 @@ func hasViewUpdateChanges(req *client.UpdateViewRequest) bool {
 	return req.Name != nil || req.Options != nil || req.ViewData != nil
 }
 
+func viewJSONRawMessage(body []byte) *json.RawMessage {
+	msg := json.RawMessage(body)
+	return &msg
+}
+
+func viewJSONNull() *json.RawMessage {
+	return viewJSONRawMessage([]byte("null"))
+}
+
 func decodeViewJSONObjectField(fieldName string, value types.String) (map[string]interface{}, error) {
 	if value.IsNull() || value.IsUnknown() || strings.TrimSpace(value.ValueString()) == "" {
 		return nil, fmt.Errorf("%s must be valid JSON and cannot be empty", fieldName)
@@ -435,14 +444,18 @@ func optionalViewJSONObjectField(fieldName string, value types.String) (map[stri
 	return decoded, diags
 }
 
-func viewJSONObjectFieldChanged(fieldName string, plan, state types.String) (bool, map[string]interface{}, diag.Diagnostics) {
+func viewJSONObjectFieldChanged(fieldName string, plan, state types.String) (bool, *json.RawMessage, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if plan.IsUnknown() {
 		return false, nil, diags
 	}
 	if plan.IsNull() {
-		return false, nil, diags
+		if state.IsNull() || state.IsUnknown() {
+			return false, nil, diags
+		}
+
+		return true, viewJSONNull(), diags
 	}
 
 	planDecoded, fieldDiags := optionalViewJSONObjectField(fieldName, plan)
@@ -450,9 +463,17 @@ func viewJSONObjectFieldChanged(fieldName string, plan, state types.String) (boo
 	if diags.HasError() {
 		return false, nil, diags
 	}
+	planEncoded, err := json.Marshal(planDecoded)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Invalid %s", fieldName),
+			fmt.Sprintf("could not encode %s to JSON: %s", fieldName, err),
+		)
+		return false, nil, diags
+	}
 
 	if state.IsNull() || state.IsUnknown() {
-		return true, planDecoded, diags
+		return true, viewJSONRawMessage(planEncoded), diags
 	}
 
 	stateDecoded, err := decodeViewJSONObjectField(fieldName, state)
@@ -468,7 +489,7 @@ func viewJSONObjectFieldChanged(fieldName string, plan, state types.String) (boo
 		return false, nil, diags
 	}
 
-	return true, planDecoded, diags
+	return true, viewJSONRawMessage(planEncoded), diags
 }
 
 func setViewResourceModel(ctx context.Context, model *ViewResourceModel, view *client.View) diag.Diagnostics {

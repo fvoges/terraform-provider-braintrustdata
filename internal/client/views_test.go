@@ -259,32 +259,55 @@ func TestUpdateView(t *testing.T) {
 			t.Errorf("expected path /v1/view/view-123, got %s", r.URL.Path)
 		}
 
-		var req UpdateViewRequest
+		var req map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
 
-		if req.ObjectID != "project-123" {
-			t.Errorf("expected object_id project-123, got %q", req.ObjectID)
+		var objectID string
+		if err := json.Unmarshal(req["object_id"], &objectID); err != nil {
+			t.Fatalf("decode object_id: %v", err)
 		}
-		if req.ObjectType != ACLObjectTypeProject {
-			t.Errorf("expected object_type project, got %q", req.ObjectType)
+		if objectID != "project-123" {
+			t.Errorf("expected object_id project-123, got %q", objectID)
 		}
-		if req.Name == nil || *req.Name != "updated" {
-			t.Errorf("expected name updated, got %#v", req.Name)
+
+		var objectType ACLObjectType
+		if err := json.Unmarshal(req["object_type"], &objectType); err != nil {
+			t.Fatalf("decode object_type: %v", err)
 		}
-		if got := req.Options["freezeColumns"]; got != true {
+		if objectType != ACLObjectTypeProject {
+			t.Errorf("expected object_type project, got %q", objectType)
+		}
+
+		var name string
+		if err := json.Unmarshal(req["name"], &name); err != nil {
+			t.Fatalf("decode name: %v", err)
+		}
+		if name != "updated" {
+			t.Errorf("expected name updated, got %q", name)
+		}
+
+		var options map[string]interface{}
+		if err := json.Unmarshal(req["options"], &options); err != nil {
+			t.Fatalf("decode options: %v", err)
+		}
+		if got := options["freezeColumns"]; got != true {
 			t.Errorf("expected options.freezeColumns true, got %v", got)
 		}
 
 		resp := View{
 			ID:         "view-123",
-			Name:       *req.Name,
-			ObjectID:   req.ObjectID,
-			ObjectType: req.ObjectType,
+			Name:       name,
+			ObjectID:   objectID,
+			ObjectType: objectType,
 			ViewType:   ViewTypeExperiments,
-			Options:    req.Options,
-			ViewData:   req.ViewData,
+			Options:    options,
+			ViewData: map[string]interface{}{
+				"search": map[string]interface{}{
+					"match": []interface{}{},
+				},
+			},
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -296,18 +319,27 @@ func TestUpdateView(t *testing.T) {
 	client.httpClient = server.Client()
 
 	name := "updated"
+	options, err := viewJSONObjectRawMessage(map[string]interface{}{
+		"freezeColumns": true,
+	})
+	if err != nil {
+		t.Fatalf("encode options: %v", err)
+	}
+	viewData, err := viewJSONObjectRawMessage(map[string]interface{}{
+		"search": map[string]interface{}{
+			"match": []interface{}{},
+		},
+	})
+	if err != nil {
+		t.Fatalf("encode view_data: %v", err)
+	}
+
 	view, err := client.UpdateView(context.Background(), "view-123", &UpdateViewRequest{
 		ObjectID:   "project-123",
 		ObjectType: ACLObjectTypeProject,
 		Name:       &name,
-		Options: map[string]interface{}{
-			"freezeColumns": true,
-		},
-		ViewData: map[string]interface{}{
-			"search": map[string]interface{}{
-				"match": []interface{}{},
-			},
-		},
+		Options:    options,
+		ViewData:   viewData,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -315,6 +347,57 @@ func TestUpdateView(t *testing.T) {
 
 	if view.Name != "updated" {
 		t.Fatalf("expected updated name, got %q", view.Name)
+	}
+}
+
+func TestUpdateView_SendsExplicitNullClears(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/view/view-123" {
+			t.Errorf("expected path /v1/view/view-123, got %s", r.URL.Path)
+		}
+
+		var req map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		if got := string(req["options"]); got != "null" {
+			t.Fatalf("expected options to be explicit null, got %s", got)
+		}
+		if got := string(req["view_data"]); got != "null" {
+			t.Fatalf("expected view_data to be explicit null, got %s", got)
+		}
+		if _, ok := req["name"]; ok {
+			t.Fatalf("expected name to be omitted, got payload %v", req)
+		}
+
+		resp := View{
+			ID:         "view-123",
+			Name:       "default",
+			ObjectID:   "project-123",
+			ObjectType: ACLObjectTypeProject,
+			ViewType:   ViewTypeExperiments,
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	_, err := client.UpdateView(context.Background(), "view-123", &UpdateViewRequest{
+		ObjectID:   "project-123",
+		ObjectType: ACLObjectTypeProject,
+		Options:    viewJSONNull(),
+		ViewData:   viewJSONNull(),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
