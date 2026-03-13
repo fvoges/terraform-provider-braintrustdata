@@ -121,7 +121,7 @@ func (r *ViewResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"options": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Optional view options as a JSON-encoded object.",
+				MarkdownDescription: "Optional view options as a JSON-encoded object. Removing this from configuration sends an explicit null clear on update, but current backend behavior may ignore the clear and return the existing value.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -129,7 +129,7 @@ func (r *ViewResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"view_data": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Optional view definition as a JSON-encoded object.",
+				MarkdownDescription: "Optional view definition as a JSON-encoded object. Removing this from configuration sends an explicit null clear on update, but current backend behavior may ignore the clear and return the existing value.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
