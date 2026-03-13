@@ -175,3 +175,207 @@ func TestListViews_SpecialCharacters(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestCreateView(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/view" {
+			t.Errorf("expected path /v1/view, got %s", r.URL.Path)
+		}
+
+		var req CreateViewRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		if req.ObjectID != "project-123" {
+			t.Errorf("expected object_id project-123, got %q", req.ObjectID)
+		}
+		if req.ObjectType != ACLObjectTypeProject {
+			t.Errorf("expected object_type project, got %q", req.ObjectType)
+		}
+		if req.ViewType != ViewTypeExperiments {
+			t.Errorf("expected view_type experiments, got %q", req.ViewType)
+		}
+		if req.Name != "default" {
+			t.Errorf("expected name default, got %q", req.Name)
+		}
+		if got := req.Options["viewType"]; got != "table" {
+			t.Errorf("expected options.viewType table, got %v", got)
+		}
+		if got := req.ViewData["search"]; got == nil {
+			t.Errorf("expected view_data.search to be set")
+		}
+
+		resp := View{
+			ID:         "view-123",
+			Name:       req.Name,
+			ObjectID:   req.ObjectID,
+			ObjectType: req.ObjectType,
+			ViewType:   req.ViewType,
+			Options:    req.Options,
+			ViewData:   req.ViewData,
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	view, err := client.CreateView(context.Background(), &CreateViewRequest{
+		ObjectID:   "project-123",
+		ObjectType: ACLObjectTypeProject,
+		ViewType:   ViewTypeExperiments,
+		Name:       "default",
+		Options: map[string]interface{}{
+			"viewType": "table",
+		},
+		ViewData: map[string]interface{}{
+			"search": map[string]interface{}{
+				"filter": []interface{}{},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if view.ID != "view-123" {
+		t.Fatalf("expected id view-123, got %s", view.ID)
+	}
+}
+
+func TestUpdateView(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/view/view-123" {
+			t.Errorf("expected path /v1/view/view-123, got %s", r.URL.Path)
+		}
+
+		var req UpdateViewRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		if req.ObjectID != "project-123" {
+			t.Errorf("expected object_id project-123, got %q", req.ObjectID)
+		}
+		if req.ObjectType != ACLObjectTypeProject {
+			t.Errorf("expected object_type project, got %q", req.ObjectType)
+		}
+		if req.Name == nil || *req.Name != "updated" {
+			t.Errorf("expected name updated, got %#v", req.Name)
+		}
+		if got := req.Options["freezeColumns"]; got != true {
+			t.Errorf("expected options.freezeColumns true, got %v", got)
+		}
+
+		resp := View{
+			ID:         "view-123",
+			Name:       *req.Name,
+			ObjectID:   req.ObjectID,
+			ObjectType: req.ObjectType,
+			ViewType:   ViewTypeExperiments,
+			Options:    req.Options,
+			ViewData:   req.ViewData,
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	name := "updated"
+	view, err := client.UpdateView(context.Background(), "view-123", &UpdateViewRequest{
+		ObjectID:   "project-123",
+		ObjectType: ACLObjectTypeProject,
+		Name:       &name,
+		Options: map[string]interface{}{
+			"freezeColumns": true,
+		},
+		ViewData: map[string]interface{}{
+			"search": map[string]interface{}{
+				"match": []interface{}{},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if view.Name != "updated" {
+		t.Fatalf("expected updated name, got %q", view.Name)
+	}
+}
+
+func TestUpdateView_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
+
+	_, err := client.UpdateView(context.Background(), "", &UpdateViewRequest{
+		ObjectID:   "project-123",
+		ObjectType: ACLObjectTypeProject,
+	})
+	if !errors.Is(err, ErrEmptyViewID) {
+		t.Fatalf("expected ErrEmptyViewID, got %v", err)
+	}
+}
+
+func TestDeleteView(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/view/view-123" {
+			t.Errorf("expected path /v1/view/view-123, got %s", r.URL.Path)
+		}
+
+		var req DeleteViewRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		if req.ObjectID != "project-123" {
+			t.Errorf("expected object_id project-123, got %q", req.ObjectID)
+		}
+		if req.ObjectType != ACLObjectTypeProject {
+			t.Errorf("expected object_type project, got %q", req.ObjectType)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(View{ID: "view-123"})
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	err := client.DeleteView(context.Background(), "view-123", &DeleteViewRequest{
+		ObjectID:   "project-123",
+		ObjectType: ACLObjectTypeProject,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteView_EmptyID(t *testing.T) {
+	client := NewClient("sk-test", "https://api.braintrust.dev", "org-test")
+
+	err := client.DeleteView(context.Background(), "", &DeleteViewRequest{
+		ObjectID:   "project-123",
+		ObjectType: ACLObjectTypeProject,
+	})
+	if !errors.Is(err, ErrEmptyViewID) {
+		t.Fatalf("expected ErrEmptyViewID, got %v", err)
+	}
+}

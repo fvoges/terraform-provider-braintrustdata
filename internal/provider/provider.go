@@ -144,6 +144,7 @@ func (p *BraintrustProvider) Resources(_ context.Context) []func() resource.Reso
 		NewPromptResource,
 		NewRoleResource,
 		NewScoreResource,
+		NewViewResource,
 	}
 }
 
