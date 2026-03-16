@@ -58,6 +58,26 @@ func TestGetTag_EmptyID(t *testing.T) {
 	}
 }
 
+func TestGetTag_WhitespaceID(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		t.Fatalf("expected no API call for whitespace-only ID")
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	_, err := client.GetTag(context.Background(), " \t\r\n")
+	if !errors.Is(err, ErrEmptyTagID) {
+		t.Fatalf("expected ErrEmptyTagID, got %v", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("expected no API call for whitespace-only ID, got %d request(s)", requestCount)
+	}
+}
+
 func TestListTags_WithOptions(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -149,5 +169,176 @@ func TestListTags_SpecialCharacters(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCreateTag(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/project_tag" {
+			t.Errorf("expected path /v1/project_tag, got %s", r.URL.Path)
+		}
+
+		var req CreateTagRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		if req.ProjectID != "proj-123" {
+			t.Errorf("expected project_id proj-123, got %q", req.ProjectID)
+		}
+		if req.Name != "production" {
+			t.Errorf("expected name production, got %q", req.Name)
+		}
+		if req.Description != "Production workloads" {
+			t.Errorf("expected description Production workloads, got %q", req.Description)
+		}
+		if req.Color != "#00AAFF" {
+			t.Errorf("expected color #00AAFF, got %q", req.Color)
+		}
+
+		resp := Tag{
+			ID:          "tag-123",
+			Name:        req.Name,
+			ProjectID:   req.ProjectID,
+			Description: req.Description,
+			Color:       req.Color,
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	tag, err := client.CreateTag(context.Background(), &CreateTagRequest{
+		ProjectID:   "proj-123",
+		Name:        "production",
+		Description: "Production workloads",
+		Color:       "#00AAFF",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tag.ID != "tag-123" {
+		t.Fatalf("expected id tag-123, got %q", tag.ID)
+	}
+}
+
+func TestUpdateTag(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/project_tag/tag-123" {
+			t.Errorf("expected path /v1/project_tag/tag-123, got %s", r.URL.Path)
+		}
+
+		var req UpdateTagRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		if req.Name == nil || *req.Name != "production-updated" {
+			t.Fatalf("expected name production-updated, got %#v", req.Name)
+		}
+		if req.Description == nil || *req.Description != "Updated description" {
+			t.Fatalf("expected description Updated description, got %#v", req.Description)
+		}
+		if req.Color == nil || *req.Color != "#11BB22" {
+			t.Fatalf("expected color #11BB22, got %#v", req.Color)
+		}
+
+		resp := Tag{
+			ID:          "tag-123",
+			Name:        *req.Name,
+			ProjectID:   "proj-123",
+			Description: *req.Description,
+			Color:       *req.Color,
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	name := "production-updated"
+	description := "Updated description"
+	color := "#11BB22"
+	tag, err := client.UpdateTag(context.Background(), "tag-123", &UpdateTagRequest{
+		Name:        &name,
+		Description: &description,
+		Color:       &color,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tag.Name != "production-updated" {
+		t.Fatalf("expected name production-updated, got %q", tag.Name)
+	}
+}
+
+func TestUpdateTag_WhitespaceID(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		t.Fatalf("expected no API call for whitespace-only ID")
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	_, err := client.UpdateTag(context.Background(), " \t\r\n", &UpdateTagRequest{})
+	if !errors.Is(err, ErrEmptyTagID) {
+		t.Fatalf("expected ErrEmptyTagID, got %v", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("expected no API call for whitespace-only ID, got %d request(s)", requestCount)
+	}
+}
+
+func TestDeleteTag(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE method, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/project_tag/tag-123" {
+			t.Errorf("expected path /v1/project_tag/tag-123, got %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	if err := client.DeleteTag(context.Background(), "tag-123"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteTag_WhitespaceID(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		t.Fatalf("expected no API call for whitespace-only ID")
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	err := client.DeleteTag(context.Background(), " \t\r\n")
+	if !errors.Is(err, ErrEmptyTagID) {
+		t.Fatalf("expected ErrEmptyTagID, got %v", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("expected no API call for whitespace-only ID, got %d request(s)", requestCount)
 	}
 }
