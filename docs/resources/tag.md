@@ -40,8 +40,8 @@ output "tag_id" {
 
 ### Optional
 
-- `color` (String) Color of the tag for UI display.
-- `description` (String) The tag description.
+- `color` (String) Color of the tag for UI display. Omit or set `null` to preserve the existing remote value. Clearing is not currently supported by the API.
+- `description` (String) The tag description. Omit or set `null` to preserve the existing remote value. Clearing is not currently supported by the API.
 
 ### Read-Only
 
