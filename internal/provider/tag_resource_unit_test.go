@@ -82,7 +82,7 @@ func TestBuildUpdateTagRequest_OnlyChangedFields(t *testing.T) {
 	}
 }
 
-func TestBuildUpdateTagRequest_RejectsDescriptionNullClear(t *testing.T) {
+func TestBuildUpdateTagRequest_DescriptionNullNoOp(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -95,17 +95,27 @@ func TestBuildUpdateTagRequest_RejectsDescriptionNullClear(t *testing.T) {
 		Description: types.StringNull(),
 	}
 
-	_, diags := buildUpdateTagRequest(ctx, plan, state)
-	if !diags.HasError() {
-		t.Fatal("expected diagnostics when clearing description")
+	req, diags := buildUpdateTagRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 
-	if got := diags[0].Summary(); got != "Cannot Clear Description" {
-		t.Fatalf("unexpected diagnostic summary: %q", got)
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if len(payload) != 0 {
+		t.Fatalf("expected no-op update payload for null description, got %v", payload)
 	}
 }
 
-func TestBuildUpdateTagRequest_RejectsColorNullClear(t *testing.T) {
+func TestBuildUpdateTagRequest_ColorNullNoOp(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -118,13 +128,23 @@ func TestBuildUpdateTagRequest_RejectsColorNullClear(t *testing.T) {
 		Color: types.StringNull(),
 	}
 
-	_, diags := buildUpdateTagRequest(ctx, plan, state)
-	if !diags.HasError() {
-		t.Fatal("expected diagnostics when clearing color")
+	req, diags := buildUpdateTagRequest(ctx, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 
-	if got := diags[0].Summary(); got != "Cannot Clear Color" {
-		t.Fatalf("unexpected diagnostic summary: %q", got)
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal update request: %v", err)
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if len(payload) != 0 {
+		t.Fatalf("expected no-op update payload for null color, got %v", payload)
 	}
 }
 

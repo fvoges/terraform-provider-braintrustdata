@@ -71,7 +71,7 @@ func (r *TagResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 			"description": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "The tag description.",
+				MarkdownDescription: "The tag description. Omit or set `null` to preserve the existing remote value. Clearing is not currently supported by the API.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -79,7 +79,7 @@ func (r *TagResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 			"color": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Color of the tag for UI display.",
+				MarkdownDescription: "Color of the tag for UI display. Omit or set `null` to preserve the existing remote value. Clearing is not currently supported by the API.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -270,39 +270,17 @@ func buildUpdateTagRequest(_ context.Context, plan, state TagResourceModel) (*cl
 		req.Name = &v
 	}
 
-	if !plan.Description.IsUnknown() {
-		if state.Description.IsNull() {
-			if !plan.Description.IsNull() {
-				v := plan.Description.ValueString()
-				req.Description = &v
-			}
-		} else {
-			if plan.Description.IsNull() {
-				diags.AddError("Cannot Clear Description", "Description cannot be cleared after it has been set.")
-				return nil, diags
-			}
-			if !plan.Description.Equal(state.Description) {
-				v := plan.Description.ValueString()
-				req.Description = &v
-			}
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() {
+		if state.Description.IsNull() || !plan.Description.Equal(state.Description) {
+			v := plan.Description.ValueString()
+			req.Description = &v
 		}
 	}
 
-	if !plan.Color.IsUnknown() {
-		if state.Color.IsNull() {
-			if !plan.Color.IsNull() {
-				v := plan.Color.ValueString()
-				req.Color = &v
-			}
-		} else {
-			if plan.Color.IsNull() {
-				diags.AddError("Cannot Clear Color", "Color cannot be cleared after it has been set.")
-				return nil, diags
-			}
-			if !plan.Color.Equal(state.Color) {
-				v := plan.Color.ValueString()
-				req.Color = &v
-			}
+	if !plan.Color.IsUnknown() && !plan.Color.IsNull() {
+		if state.Color.IsNull() || !plan.Color.Equal(state.Color) {
+			v := plan.Color.ValueString()
+			req.Color = &v
 		}
 	}
 
