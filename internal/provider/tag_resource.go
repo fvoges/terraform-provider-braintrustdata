@@ -61,7 +61,6 @@ func (r *TagResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				MarkdownDescription: "The project ID that owns the tag.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{

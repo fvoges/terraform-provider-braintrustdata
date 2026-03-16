@@ -58,6 +58,26 @@ func TestGetTag_EmptyID(t *testing.T) {
 	}
 }
 
+func TestGetTag_WhitespaceID(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		t.Fatalf("expected no API call for whitespace-only ID")
+	}))
+	defer server.Close()
+
+	client := NewClient("sk-test", server.URL, "org-test")
+	client.httpClient = server.Client()
+
+	_, err := client.GetTag(context.Background(), " \t\r\n")
+	if !errors.Is(err, ErrEmptyTagID) {
+		t.Fatalf("expected ErrEmptyTagID, got %v", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("expected no API call for whitespace-only ID, got %d request(s)", requestCount)
+	}
+}
+
 func TestListTags_WithOptions(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
