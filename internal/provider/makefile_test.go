@@ -60,7 +60,7 @@ func TestGitHubWorkflow_AcceptanceStepQuarantinesFlakyTests(t *testing.T) {
 	}
 
 	workflow := string(content)
-	acceptanceGoTestCommandRe := regexp.MustCompile(`(?s)run:\s*go\s+test\s+\./internal/provider/\.\.\.`)
+	acceptanceGoTestCommandRe := regexp.MustCompile(`(?s)-\s+name:\s+Run acceptance tests.*?go\s+test\s+\./internal/provider/\.\.\.`)
 	if !acceptanceGoTestCommandRe.MatchString(workflow) {
 		t.Fatalf("workflow must include acceptance go test command for internal/provider tests")
 	}
@@ -77,6 +77,15 @@ func TestGitHubWorkflow_AcceptanceStepQuarantinesFlakyTests(t *testing.T) {
 
 	if !strings.Contains(workflow, "TODO(#65)") {
 		t.Fatalf("workflow must document quarantine with TODO(#65)")
+	}
+
+	if !strings.Contains(workflow, "tee test-results/acceptance-tests.log") {
+		t.Fatalf("workflow must capture acceptance test output to a stable artifact path")
+	}
+
+	uploadArtifactRe := regexp.MustCompile(`(?s)-\s+name:\s+Upload acceptance test output.*?if:\s+failure\(\).*?uses:\s+actions/upload-artifact@v4.*?path:\s+test-results/acceptance-tests\.log`)
+	if !uploadArtifactRe.MatchString(workflow) {
+		t.Fatalf("workflow must upload acceptance test output artifact on failure")
 	}
 }
 

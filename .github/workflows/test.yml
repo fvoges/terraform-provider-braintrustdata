@@ -123,4 +123,18 @@ jobs:
           BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
           BRAINTRUST_ORG_ID: ${{ secrets.BRAINTRUST_ORG_ID }}
         # TODO(#65): remove CI quarantine after flaky acceptance tests are fixed.
-        run: go test ./internal/provider/... -v -count=1 -run '^TestAcc' -skip 'TestAccACLResource_WithRole|TestAccRoleResource' -timeout=120m
+        shell: bash
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          go test ./internal/provider/... -v -count=1 -run '^TestAcc' -skip 'TestAccACLResource_WithRole|TestAccRoleResource' -timeout=120m \
+            2>&1 | tee test-results/acceptance-tests.log
+
+      - name: Upload acceptance test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-test-output
+          path: test-results/acceptance-tests.log
+          if-no-files-found: error
+          retention-days: 14
