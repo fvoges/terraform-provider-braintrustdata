@@ -35,7 +35,7 @@ type CreateAISecretRequest struct {
 	Name     string                 `json:"name"`
 	Type     string                 `json:"type,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
-	Secret   string                 `json:"secret,omitempty"`
+	Secret   string                 `json:"secret"`
 	OrgName  string                 `json:"org_name,omitempty"`
 }
 

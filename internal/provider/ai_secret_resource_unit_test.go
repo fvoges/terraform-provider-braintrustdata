@@ -347,6 +347,66 @@ func TestSetAISecretResourceModel_LeavesSecretNullWhenAPIOmitsItAndNoPriorState(
 	}
 }
 
+func TestSetAISecretResourceModel_PreservesEmptyMetadataWhenAPIOmitsIt(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := AISecretResourceModel{
+		Metadata: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+	}
+	aiSecret := &client.AISecret{
+		ID:            "ai-secret-1",
+		Name:          "PROVIDER_OPENAI_CREDENTIAL",
+		Type:          "openai",
+		OrgID:         "org-123",
+		PreviewSecret: "********",
+		Created:       "2026-03-16T18:00:00Z",
+		UpdatedAt:     "2026-03-16T18:05:00Z",
+	}
+
+	diags := setAISecretResourceModel(ctx, &model, aiSecret)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if model.Metadata.IsNull() {
+		t.Fatal("expected empty metadata map to remain empty, got null")
+	}
+	if model.Metadata.IsUnknown() {
+		t.Fatal("expected empty metadata map to remain known, got unknown")
+	}
+	if got := len(model.Metadata.Elements()); got != 0 {
+		t.Fatalf("expected empty metadata map, got %d elements", got)
+	}
+}
+
+func TestSetAISecretResourceModel_LeavesMetadataNullWhenAPIOmitsItAndNoPriorState(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := AISecretResourceModel{
+		Metadata: types.MapNull(types.StringType),
+	}
+	aiSecret := &client.AISecret{
+		ID:            "ai-secret-1",
+		Name:          "PROVIDER_OPENAI_CREDENTIAL",
+		Type:          "openai",
+		OrgID:         "org-123",
+		PreviewSecret: "********",
+		Created:       "2026-03-16T18:00:00Z",
+		UpdatedAt:     "2026-03-16T18:05:00Z",
+	}
+
+	diags := setAISecretResourceModel(ctx, &model, aiSecret)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if !model.Metadata.IsNull() {
+		t.Fatal("expected null metadata to remain null when API omits it")
+	}
+}
+
 func TestAISecretResourceSchema_SecretSensitive(t *testing.T) {
 	t.Parallel()
 

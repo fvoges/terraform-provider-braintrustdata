@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -230,6 +231,19 @@ func TestCreateAISecret_NilRequest(t *testing.T) {
 	_, err := client.CreateAISecret(context.Background(), nil)
 	if !errors.Is(err, ErrNilCreateAISecretRequest) {
 		t.Fatalf("expected ErrNilCreateAISecretRequest, got %v", err)
+	}
+}
+
+func TestCreateAISecretRequestSecretJSONTag(t *testing.T) {
+	t.Parallel()
+
+	field, ok := reflect.TypeOf(CreateAISecretRequest{}).FieldByName("Secret")
+	if !ok {
+		t.Fatal("expected Secret field on CreateAISecretRequest")
+	}
+
+	if got := field.Tag.Get("json"); got != "secret" {
+		t.Fatalf("expected Secret json tag to be %q, got %q", "secret", got)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/braintrustdata/terraform-provider-braintrustdata/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -390,13 +391,21 @@ func setAISecretResourceModel(ctx context.Context, data *AISecretResourceModel, 
 	data.Created = stringOrNull(aiSecret.Created)
 	data.UpdatedAt = stringOrNull(aiSecret.UpdatedAt)
 
-	metadataValue, metadataDiags := aiSecretMetadataToTerraformMap(ctx, aiSecret.Metadata)
+	metadataValue, metadataDiags := aiSecretMetadataToTerraformMapWithState(ctx, aiSecret.Metadata)
 	diags.Append(metadataDiags...)
 	if diags.HasError() {
 		return diags
 	}
 
-	data.Metadata = metadataValue
+	if metadataValue.IsNull() {
+		if data.Metadata.IsNull() || data.Metadata.IsUnknown() {
+			data.Metadata = types.MapNull(types.StringType)
+		} else {
+			data.Metadata = types.MapValueMust(types.StringType, map[string]attr.Value{})
+		}
+	} else {
+		data.Metadata = metadataValue
+	}
 
 	// API does not return the raw secret on reads for security reasons.
 	// Preserve the prior state value when known.
@@ -440,6 +449,27 @@ func aiSecretMetadataFromTerraformMap(ctx context.Context, metadataMap types.Map
 	}
 
 	return metadata, diags
+}
+
+func aiSecretMetadataToTerraformMapWithState(ctx context.Context, metadata map[string]interface{}) (types.Map, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if len(metadata) == 0 {
+		return types.MapNull(types.StringType), diags
+	}
+
+	metadataStrings := make(map[string]string, len(metadata))
+	for key, value := range metadata {
+		metadataStrings[key] = fmt.Sprintf("%v", value)
+	}
+
+	metadataValue, metadataDiags := types.MapValueFrom(ctx, types.StringType, metadataStrings)
+	diags.Append(metadataDiags...)
+	if diags.HasError() {
+		return types.MapNull(types.StringType), diags
+	}
+
+	return metadataValue, diags
 }
 
 func aiSecretStringPtr(value string) *string {
