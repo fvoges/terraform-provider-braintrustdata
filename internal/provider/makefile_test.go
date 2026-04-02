@@ -83,7 +83,7 @@ func TestGitHubWorkflow_AcceptanceStepQuarantinesFlakyTests(t *testing.T) {
 		t.Fatalf("workflow must capture acceptance test output to a stable artifact path")
 	}
 
-	uploadArtifactRe := regexp.MustCompile(`(?s)-\s+name:\s+Upload acceptance test output.*?if:\s+failure\(\).*?uses:\s+actions/upload-artifact@v4.*?path:\s+test-results/acceptance-tests\.log`)
+	uploadArtifactRe := regexp.MustCompile(`(?s)-\s+name:\s+Upload acceptance test output.*?if:\s+failure\(\).*?uses:\s+actions/upload-artifact@v[0-9]+.*?path:\s+test-results/acceptance-tests\.log`)
 	if !uploadArtifactRe.MatchString(workflow) {
 		t.Fatalf("workflow must upload acceptance test output artifact on failure")
 	}
